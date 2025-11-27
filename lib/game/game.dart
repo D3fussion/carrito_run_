@@ -5,15 +5,18 @@ import 'package:flame/game.dart';
 import 'package:flame/parallax.dart';
 import 'package:flutter/material.dart';
 
-class CarritoGame extends FlameGame with HasKeyboardHandlerComponents {
+
+class CarritoGame extends FlameGame with HasKeyboardHandlerComponents, PanDetector {
   ParallaxComponent? _parallaxComponent;
   CarritoComponent? _carrito;
   bool _isLandscape = false;
+
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
   }
+
 
   @override
   void onGameResize(Vector2 size) {
@@ -31,19 +34,30 @@ class CarritoGame extends FlameGame with HasKeyboardHandlerComponents {
     }
   }
 
+  @override
+  void onPanUpdate(DragUpdateInfo info) {
+    if (_carrito != null) {
+      _carrito!.handleDrag(info.delta.global);
+    }
+  }
+
+
   Future<void> _updateCarrito() async {
     if (_carrito != null) {
       remove(_carrito!);
     }
 
+
     _carrito = CarritoComponent(isLandscape: _isLandscape);
     await add(_carrito!);
   }
+
 
   Future<void> _updateParallax() async {
     if (_parallaxComponent != null) {
       remove(_parallaxComponent!);
     }
+
 
     final layers = await Future.wait([
       loadParallaxLayer(
@@ -66,6 +80,7 @@ class CarritoGame extends FlameGame with HasKeyboardHandlerComponents {
       ),
     ]);
 
+
     final parallax = ParallaxComponent(
       parallax: Parallax(
         layers,
@@ -76,8 +91,10 @@ class CarritoGame extends FlameGame with HasKeyboardHandlerComponents {
       priority: -1,
     );
 
+
     _parallaxComponent = parallax;
     add(_parallaxComponent!);
   }
+
 
 }
