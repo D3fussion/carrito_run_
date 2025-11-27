@@ -10,11 +10,17 @@ class CarritoComponent extends SpriteComponent
   int currentLane = 2;
   final int totalLanes = 5;
   
-  final double laneChangeDuration = 0.15;
+  final double laneChangeDuration = 0.15; // Velocidad de cambio de carril
+  
+  final double jumpDuration = 0.5;
+  final double jumpScale = 1.3; // Escala máxima durante el salto
   
   bool _isMoving = false;
+  bool _isJumping = false;
   
   final double dragThreshold = 10.0;
+  
+  Vector2 _basePosition = Vector2.zero();
   
   CarritoComponent({required this.isLandscape});
 
@@ -29,6 +35,7 @@ class CarritoComponent extends SpriteComponent
     _updateSize();
     anchor = Anchor.center;
     _updatePosition();
+    _basePosition = position.clone();
   }
 
 
@@ -51,6 +58,7 @@ class CarritoComponent extends SpriteComponent
     if (sprite != null) {
       _updateSize();
       _updatePosition();
+      _basePosition = position.clone();
     }
   }
 
@@ -97,6 +105,42 @@ class CarritoComponent extends SpriteComponent
     }
   }
 
+  void jump() {
+    if (_isJumping) return;
+    
+    _isJumping = true;
+    
+    children.whereType<ScaleEffect>().forEach((effect) {
+      effect.removeFromParent();
+    });
+    
+    final scaleUp = ScaleEffect.to(
+      Vector2.all(jumpScale),
+      EffectController(
+        duration: jumpDuration / 2,
+        curve: Curves.easeOut,
+      ),
+    );
+    
+    final scaleDown = ScaleEffect.to(
+      Vector2.all(1.0),
+      EffectController(
+        duration: jumpDuration / 2,
+        curve: Curves.easeIn,
+      ),
+      onComplete: () {
+        _isJumping = false;
+      },
+    );
+    
+    add(
+      SequenceEffect([
+        scaleUp,
+        scaleDown,
+      ]),
+    );
+  }
+
 
   @override
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
@@ -104,6 +148,11 @@ class CarritoComponent extends SpriteComponent
     
     if (!isKeyDown) {
       return true;
+    }
+
+    if (keysPressed.contains(LogicalKeyboardKey.space)) {
+      jump();
+      return false;
     }
 
     if (_isMoving) {
@@ -160,7 +209,9 @@ class CarritoComponent extends SpriteComponent
     _isMoving = true;
     
     children.whereType<MoveToEffect>().forEach((effect) {
-      effect.removeFromParent();
+      if (effect.controller.duration == laneChangeDuration) {
+        effect.removeFromParent();
+      }
     });
     
     add(
@@ -172,6 +223,7 @@ class CarritoComponent extends SpriteComponent
         ),
         onComplete: () {
           _isMoving = false;
+          _basePosition = position.clone();
         },
       ),
     );

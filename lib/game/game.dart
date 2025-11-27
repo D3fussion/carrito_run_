@@ -4,12 +4,14 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/parallax.dart';
 import 'package:flutter/material.dart';
-
-
-class CarritoGame extends FlameGame with HasKeyboardHandlerComponents, PanDetector {
+class CarritoGame extends FlameGame 
+    with HasKeyboardHandlerComponents, PanDetector, TapCallbacks {
   ParallaxComponent? _parallaxComponent;
   CarritoComponent? _carrito;
   bool _isLandscape = false;
+  
+  bool _hasDragged = false;
+  Vector2? _panStartPosition;
 
 
   @override
@@ -35,9 +37,36 @@ class CarritoGame extends FlameGame with HasKeyboardHandlerComponents, PanDetect
   }
 
   @override
+  void onPanStart(DragStartInfo info) {
+    _hasDragged = false;
+    _panStartPosition = info.eventPosition.global;
+  }
+
+  @override
   void onPanUpdate(DragUpdateInfo info) {
+    _hasDragged = true;
+    
     if (_carrito != null) {
       _carrito!.handleDrag(info.delta.global);
+    }
+  }
+
+  @override
+  void onPanEnd(DragEndInfo info) {
+    _hasDragged = false;
+    _panStartPosition = null;
+  }
+
+  @override
+  void onPanCancel() {
+    _hasDragged = false;
+    _panStartPosition = null;
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    if (!_hasDragged && _carrito != null) {
+      _carrito!.jump();
     }
   }
 
