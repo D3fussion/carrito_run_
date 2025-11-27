@@ -1,10 +1,13 @@
+import 'package:carrito_run/game/components/carrito_component.dart';
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/parallax.dart';
 import 'package:flutter/material.dart';
 
-class CarritoGame extends FlameGame {
+class CarritoGame extends FlameGame with HasKeyboardHandlerComponents {
   ParallaxComponent? _parallaxComponent;
+  CarritoComponent? _carrito;
   bool _isLandscape = false;
 
   @override
@@ -18,10 +21,23 @@ class CarritoGame extends FlameGame {
     
     final isCurrentlyLandscape = size.x > size.y;
     
-    if (_isLandscape != isCurrentlyLandscape || _parallaxComponent == null) {
+    if (_isLandscape != isCurrentlyLandscape) {
       _isLandscape = isCurrentlyLandscape;
       _updateParallax();
+      _updateCarrito();
+    } else if (_parallaxComponent == null) {
+      _updateParallax();
+      _updateCarrito();
     }
+  }
+
+  Future<void> _updateCarrito() async {
+    if (_carrito != null) {
+      remove(_carrito!);
+    }
+
+    _carrito = CarritoComponent(isLandscape: _isLandscape);
+    await add(_carrito!);
   }
 
   Future<void> _updateParallax() async {
