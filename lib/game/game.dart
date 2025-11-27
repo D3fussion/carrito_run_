@@ -1,14 +1,17 @@
 import 'package:carrito_run/game/components/carrito_component.dart';
+import 'package:carrito_run/game/managers/obstacle_spawner.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/parallax.dart';
 import 'package:flutter/material.dart';
 class CarritoGame extends FlameGame 
-    with HasKeyboardHandlerComponents, PanDetector, TapCallbacks {
+    with HasKeyboardHandlerComponents, PanDetector, TapCallbacks, HasCollisionDetection {
   ParallaxComponent? _parallaxComponent;
   CarritoComponent? _carrito;
   bool _isLandscape = false;
+  ObstacleSpawner? _obstacleSpawner;
+
   
   bool _hasDragged = false;
   Vector2? _panStartPosition;
@@ -76,9 +79,20 @@ class CarritoGame extends FlameGame
       remove(_carrito!);
     }
 
+    if (_obstacleSpawner != null) {
+      remove(_obstacleSpawner!);
+    }
 
     _carrito = CarritoComponent(isLandscape: _isLandscape);
     await add(_carrito!);
+    
+    _obstacleSpawner = ObstacleSpawner(
+      isLandscape: _isLandscape,
+      gameSpeed: 200.0,
+      minSpawnInterval: 2.0,
+      maxSpawnInterval: 4.0,
+    );
+    await add(_obstacleSpawner!);
   }
 
 

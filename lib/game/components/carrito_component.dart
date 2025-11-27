@@ -2,10 +2,11 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
+import 'package:flame/collisions.dart';
+import 'obstacle_component.dart';
 
 class CarritoComponent extends SpriteComponent 
-    with KeyboardHandler, HasGameReference {
+    with KeyboardHandler, HasGameReference, CollisionCallbacks {
   final bool isLandscape;
   int currentLane = 2;
   final int totalLanes = 5;
@@ -32,6 +33,7 @@ class CarritoComponent extends SpriteComponent
       isLandscape ? 'carrito_landscape.png' : 'carrito_portrait.png'
     );
     
+    add(RectangleHitbox());
     _updateSize();
     anchor = Anchor.center;
     _updatePosition();
@@ -228,4 +230,26 @@ class CarritoComponent extends SpriteComponent
       ),
     );
   }
+
+  @override
+  void onCollisionStart(
+    Set<Vector2> intersectionPoints,
+    PositionComponent other,
+  ) {
+    super.onCollisionStart(intersectionPoints, other);
+    
+    if (other is ObstacleComponent) {
+      if (other.type == ObstacleType.jumpable && _isJumping) {
+        return;
+      }
+      
+      _handleCollision(other);
+    }
+  }
+
+  void _handleCollision(ObstacleComponent obstacle) {
+    print('¡Colisión con obstáculo ${obstacle.type}!');
+    // TODO: Implementar game over o pérdida de vida
+  }
+
 }
