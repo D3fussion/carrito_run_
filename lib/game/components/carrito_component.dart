@@ -26,6 +26,8 @@ class CarritoComponent extends PositionComponent
   final double dragThreshold = 10.0;
   Vector2 _basePosition = Vector2.zero();
 
+  final Set<ObstacleComponent> _platformsInContact = {};
+
   CarritoComponent({required this.isLandscape});
 
   @override
@@ -156,6 +158,8 @@ class CarritoComponent extends PositionComponent
 
     if (wasOnObstacle) {
       _isOnObstacle = false;
+      // Limpiar plataformas al saltar
+      _platformsInContact.clear();
     }
   }
 
@@ -241,19 +245,29 @@ class CarritoComponent extends PositionComponent
     super.onCollisionEnd(other);
 
     if (other is ObstacleComponent) {
-      if (other.type == ObstacleType.jumpable && _isOnObstacle) {
-        _isOnObstacle = false;
+      if (other.type == ObstacleType.jumpable) {
+        // Remover plataforma del conjunto
+        _platformsInContact.remove(other);
 
-        if (!_isJumping) {
-          _visualSprite.add(
-            ScaleEffect.to(
-              Vector2.all(1.0),
-              EffectController(duration: 0.3, curve: Curves.easeInOut),
-            ),
+        // Solo cambiar estado si NO hay más plataformas en contacto
+        if (_platformsInContact.isEmpty && _isOnObstacle) {
+          _isOnObstacle = false;
+
+          if (!_isJumping) {
+            _visualSprite.add(
+              ScaleEffect.to(
+                Vector2.all(1.0),
+                EffectController(duration: 0.3, curve: Curves.easeInOut),
+              ),
+            );
+          }
+
+          debugPrint("Adios - dejando todas las plataformas");
+        } else {
+          debugPrint(
+            "Aún en contacto con ${_platformsInContact.length} plataforma(s)",
           );
         }
-
-        debugPrint("Adios - dejando plataforma");
       }
     }
   }
@@ -267,12 +281,25 @@ class CarritoComponent extends PositionComponent
 
     if (other is ObstacleComponent) {
       if (other.type == ObstacleType.jumpable) {
+        // Agregar plataforma al conjunto
+        _platformsInContact.add(other);
+
         if (_isJumping) {
           print("hola - aterrizando en plataforma");
           _isOnObstacle = true;
           _stopJumpEffect();
           return;
+        } else if (!_isOnObstacle) {
+          // Si no estaba saltando pero toca una plataforma, activar estado
+          _isOnObstacle = true;
+          _visualSprite.add(
+            ScaleEffect.to(
+              Vector2.all(platformScale),
+              EffectController(duration: 0.2, curve: Curves.easeOut),
+            ),
+          );
         }
+        return;
       }
 
       _handleCollision(other);
@@ -288,7 +315,12 @@ class CarritoComponent extends PositionComponent
       if (!_isOnObstacle) {
         _visualSprite.scale = Vector2.all(1.0);
       } else {
-        _visualSprite.scale = Vector2.all(platformScale);
+        _visualSprite.add(
+          ScaleEffect.to(
+            Vector2.all(platformScale),
+            EffectController(duration: 0.2, curve: Curves.easeOut),
+          ),
+        );
       }
     }
   }

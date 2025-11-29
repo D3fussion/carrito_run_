@@ -3,17 +3,17 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 enum ObstacleType {
-  jumpable,   // Se puede saltar sobre él
-  nonJumpable // Hay que esquivarlo cambiando de carril
+  jumpable, // Se puede saltar sobre él
+  nonJumpable, // Hay que esquivarlo cambiando de carril
 }
 
-class ObstacleComponent extends SpriteComponent 
+class ObstacleComponent extends SpriteComponent
     with CollisionCallbacks, HasGameReference {
   final bool isLandscape;
   final int lane;
   final ObstacleType type;
   final double gameSpeed;
-  
+
   ObstacleComponent({
     required this.isLandscape,
     required this.lane,
@@ -24,23 +24,25 @@ class ObstacleComponent extends SpriteComponent
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    
+
     sprite = await game.loadSprite(
-      type == ObstacleType.jumpable 
-          ? 'obstacle_jumpable.png' 
-          : 'obstacle_nonjumpable.png'
+      type == ObstacleType.jumpable
+          ? 'obstacle_jumpable.png'
+          : 'obstacle_nonjumpable.png',
     );
-    
+
+    priority = 5;
+
     _updateSize();
     anchor = Anchor.center;
     _updatePosition();
-    
+
     add(RectangleHitbox());
   }
 
   void _updateSize() {
     final gameSize = game.size;
-    
+
     if (isLandscape) {
       final laneHeight = gameSize.y / 5;
       final obstacleSize = laneHeight * 0.8;
@@ -54,7 +56,7 @@ class ObstacleComponent extends SpriteComponent
 
   void _updatePosition() {
     final gameSize = game.size;
-    
+
     if (isLandscape) {
       position.x = gameSize.x + size.x;
       position.y = _getLanePositionY(gameSize.y);
@@ -77,16 +79,16 @@ class ObstacleComponent extends SpriteComponent
   @override
   void update(double dt) {
     super.update(dt);
-    
+
     if (isLandscape) {
       position.x -= gameSpeed * dt;
-      
+
       if (position.x < -size.x) {
         removeFromParent();
       }
     } else {
       position.y += gameSpeed * dt;
-      
+
       if (position.y > game.size.y + size.y) {
         removeFromParent();
       }
