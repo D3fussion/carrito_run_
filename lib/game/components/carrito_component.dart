@@ -17,6 +17,7 @@ class CarritoComponent extends PositionComponent
   final double laneChangeDuration = 0.15;
   final double jumpDuration = 0.5;
   final double jumpScale = 1.3;
+  final double platformScale = 1.15;
 
   bool _isMoving = false;
   bool _isJumping = false;
@@ -34,7 +35,6 @@ class CarritoComponent extends PositionComponent
     priority = 10;
     anchor = Anchor.center;
 
-    // Crear sprite visual como componente hijo
     _visualSprite = SpriteComponent(
       sprite: await game.loadSprite(
         isLandscape ? 'carrito_landscape.png' : 'carrito_portrait.png',
@@ -44,10 +44,8 @@ class CarritoComponent extends PositionComponent
 
     _updateSize();
 
-    // Agregar hitbox al componente padre (no se escalará)
     add(RectangleHitbox());
 
-    // Agregar sprite visual como hijo
     add(_visualSprite);
 
     _updatePosition();
@@ -65,7 +63,6 @@ class CarritoComponent extends PositionComponent
       size = Vector2(carritoWidth, carritoWidth * 2);
     }
 
-    // El sprite visual debe llenar el componente padre
     if (_visualSprite != null) {
       _visualSprite.size = size;
       _visualSprite.position = size / 2;
@@ -125,25 +122,41 @@ class CarritoComponent extends PositionComponent
 
     _isJumping = true;
 
-    // Ahora escalamos solo el sprite visual, no el componente padre
+    final startScale = _isOnObstacle ? platformScale : 1.0;
+    final wasOnObstacle = _isOnObstacle;
+
     _jumpEffect =
         FunctionEffect<CarritoComponent>((target, progress) {
+            final jumpCurve = 4 * progress * (1 - progress);
             final scaleValue =
-                1.0 + (jumpScale - 1.0) * (4 * progress * (1 - progress));
+                startScale + (jumpScale - startScale) * jumpCurve;
 
-            // Escalar solo el sprite visual
             _visualSprite.scale = Vector2.all(scaleValue);
 
             final height = 4 * progress * (1 - progress) * size.y * 0.5;
-            print('Progreso: $progress, Altura: $height');
+            print('Progreso: $progress, Altura: $height, Escala: $scaleValue');
           }, EffectController(duration: jumpDuration))
           ..onComplete = () {
             _isJumping = false;
             _jumpEffect = null;
-            _visualSprite.scale = Vector2.all(1.0);
+
+            if (_isOnObstacle) {
+              _visualSprite.scale = Vector2.all(platformScale);
+            } else {
+              _visualSprite.add(
+                ScaleEffect.to(
+                  Vector2.all(1.0),
+                  EffectController(duration: 0.3, curve: Curves.easeInOut),
+                ),
+              );
+            }
           };
 
     add(_jumpEffect!);
+
+    if (wasOnObstacle) {
+      _isOnObstacle = false;
+    }
   }
 
   @override
@@ -231,10 +244,16 @@ class CarritoComponent extends PositionComponent
       if (other.type == ObstacleType.jumpable && _isOnObstacle) {
         _isOnObstacle = false;
 
-        // Resetear la escala cuando desciende del obstáculo
-        _visualSprite.scale = Vector2.all(1.0);
+        if (!_isJumping) {
+          _visualSprite.add(
+            ScaleEffect.to(
+              Vector2.all(1.0),
+              EffectController(duration: 0.3, curve: Curves.easeInOut),
+            ),
+          );
+        }
 
-        debugPrint("Adios");
+        debugPrint("Adios - dejando plataforma");
       }
     }
   }
@@ -247,11 +266,13 @@ class CarritoComponent extends PositionComponent
     super.onCollisionStart(intersectionPoints, other);
 
     if (other is ObstacleComponent) {
-      if (other.type == ObstacleType.jumpable && _isJumping) {
-        print("hola");
-        _isOnObstacle = true;
-        _stopJumpEffect(); // Esto ahora mantiene la escala agrandada
-        return;
+      if (other.type == ObstacleType.jumpable) {
+        if (_isJumping) {
+          print("hola - aterrizando en plataforma");
+          _isOnObstacle = true;
+          _stopJumpEffect();
+          return;
+        }
       }
 
       _handleCollision(other);
@@ -264,12 +285,10 @@ class CarritoComponent extends PositionComponent
       _jumpEffect = null;
       _isJumping = false;
 
-      // Solo resetear escala si NO está sobre un obstáculo
       if (!_isOnObstacle) {
         _visualSprite.scale = Vector2.all(1.0);
       } else {
-        // Mantener la escala agrandada
-        _visualSprite.scale = Vector2.all(jumpScale);
+        _visualSprite.scale = Vector2.all(platformScale);
       }
     }
   }
