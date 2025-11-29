@@ -158,7 +158,6 @@ class CarritoComponent extends PositionComponent
 
     if (wasOnObstacle) {
       _isOnObstacle = false;
-      // Limpiar plataformas al saltar
       _platformsInContact.clear();
     }
   }
@@ -241,15 +240,42 @@ class CarritoComponent extends PositionComponent
   }
 
   @override
+  void onCollisionStart(
+    Set<Vector2> intersectionPoints,
+    PositionComponent other,
+  ) {
+    super.onCollisionStart(intersectionPoints, other);
+
+    if (other is ObstacleComponent) {
+      if (other.type == ObstacleType.jumpable) {
+        if (_isJumping) {
+          print("hola - aterrizando en plataforma");
+          _platformsInContact.add(other);
+          _isOnObstacle = true;
+          _stopJumpEffect();
+          return;
+        } else if (_isOnObstacle && _platformsInContact.isNotEmpty) {
+          print("Moviéndose a plataforma adyacente");
+          _platformsInContact.add(other);
+          return;
+        } else {
+          _handleCollision(other);
+          return;
+        }
+      }
+
+      _handleCollision(other);
+    }
+  }
+
+  @override
   void onCollisionEnd(PositionComponent other) {
     super.onCollisionEnd(other);
 
     if (other is ObstacleComponent) {
       if (other.type == ObstacleType.jumpable) {
-        // Remover plataforma del conjunto
         _platformsInContact.remove(other);
 
-        // Solo cambiar estado si NO hay más plataformas en contacto
         if (_platformsInContact.isEmpty && _isOnObstacle) {
           _isOnObstacle = false;
 
@@ -269,40 +295,6 @@ class CarritoComponent extends PositionComponent
           );
         }
       }
-    }
-  }
-
-  @override
-  void onCollisionStart(
-    Set<Vector2> intersectionPoints,
-    PositionComponent other,
-  ) {
-    super.onCollisionStart(intersectionPoints, other);
-
-    if (other is ObstacleComponent) {
-      if (other.type == ObstacleType.jumpable) {
-        // Agregar plataforma al conjunto
-        _platformsInContact.add(other);
-
-        if (_isJumping) {
-          print("hola - aterrizando en plataforma");
-          _isOnObstacle = true;
-          _stopJumpEffect();
-          return;
-        } else if (!_isOnObstacle) {
-          // Si no estaba saltando pero toca una plataforma, activar estado
-          _isOnObstacle = true;
-          _visualSprite.add(
-            ScaleEffect.to(
-              Vector2.all(platformScale),
-              EffectController(duration: 0.2, curve: Curves.easeOut),
-            ),
-          );
-        }
-        return;
-      }
-
-      _handleCollision(other);
     }
   }
 
