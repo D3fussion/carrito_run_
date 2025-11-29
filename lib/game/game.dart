@@ -1,34 +1,41 @@
 import 'package:carrito_run/game/components/carrito_component.dart';
 import 'package:carrito_run/game/managers/obstacle_spawner.dart';
+import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/parallax.dart';
 import 'package:flutter/material.dart';
-class CarritoGame extends FlameGame 
-    with HasKeyboardHandlerComponents, PanDetector, TapCallbacks, HasCollisionDetection {
+
+class CarritoGame extends FlameGame
+    with
+        HasKeyboardHandlerComponents,
+        PanDetector,
+        TapCallbacks,
+        HasCollisionDetection {
+  final GameState gameState;
+
   ParallaxComponent? _parallaxComponent;
   CarritoComponent? _carrito;
   bool _isLandscape = false;
   ObstacleSpawner? _obstacleSpawner;
 
-  
   bool _hasDragged = false;
   Vector2? _panStartPosition;
 
+  CarritoGame({required this.gameState});
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
   }
 
-
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    
+
     final isCurrentlyLandscape = size.x > size.y;
-    
+
     if (_isLandscape != isCurrentlyLandscape) {
       _isLandscape = isCurrentlyLandscape;
       _updateParallax();
@@ -48,7 +55,7 @@ class CarritoGame extends FlameGame
   @override
   void onPanUpdate(DragUpdateInfo info) {
     _hasDragged = true;
-    
+
     if (_carrito != null) {
       _carrito!.handleDrag(info.delta.global);
     }
@@ -73,7 +80,6 @@ class CarritoGame extends FlameGame
     }
   }
 
-
   Future<void> _updateCarrito() async {
     if (_carrito != null) {
       remove(_carrito!);
@@ -83,9 +89,12 @@ class CarritoGame extends FlameGame
       remove(_obstacleSpawner!);
     }
 
-    _carrito = CarritoComponent(isLandscape: _isLandscape);
+    _carrito = CarritoComponent(
+      isLandscape: _isLandscape,
+      gameState: gameState,
+    );
     await add(_carrito!);
-    
+
     _obstacleSpawner = ObstacleSpawner(
       isLandscape: _isLandscape,
       gameSpeed: 200.0,
@@ -95,17 +104,15 @@ class CarritoGame extends FlameGame
     await add(_obstacleSpawner!);
   }
 
-
   Future<void> _updateParallax() async {
     if (_parallaxComponent != null) {
       remove(_parallaxComponent!);
     }
 
-
     final layers = await Future.wait([
       loadParallaxLayer(
         ParallaxImageData(
-          _isLandscape ? 'road_landscape.png' : 'road_portrait.png'
+          _isLandscape ? 'road_landscape.png' : 'road_portrait.png',
         ),
         velocityMultiplier: Vector2(1.3, 1.3),
         alignment: Alignment.center,
@@ -114,7 +121,7 @@ class CarritoGame extends FlameGame
       ),
       loadParallaxLayer(
         ParallaxImageData(
-          _isLandscape ? 'borders_landscape.png' : 'borders_portrait.png'
+          _isLandscape ? 'borders_landscape.png' : 'borders_portrait.png',
         ),
         velocityMultiplier: Vector2(1.0, 1.0),
         alignment: Alignment.center,
@@ -123,21 +130,15 @@ class CarritoGame extends FlameGame
       ),
     ]);
 
-
     final parallax = ParallaxComponent(
       parallax: Parallax(
         layers,
-        baseVelocity: _isLandscape 
-          ? Vector2(-80, 0)
-          : Vector2(0, 80),
+        baseVelocity: _isLandscape ? Vector2(-80, 0) : Vector2(0, 80),
       ),
       priority: -1,
     );
 
-
     _parallaxComponent = parallax;
     add(_parallaxComponent!);
   }
-
-
 }

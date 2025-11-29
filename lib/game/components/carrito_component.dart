@@ -1,3 +1,5 @@
+import 'package:carrito_run/game/components/coin_component.dart';
+import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +10,8 @@ import 'obstacle_component.dart';
 class CarritoComponent extends PositionComponent
     with KeyboardHandler, HasGameReference, CollisionCallbacks {
   final bool isLandscape;
+  final GameState gameState;
+
   int currentLane = 2;
   final int totalLanes = 5;
   Effect? _jumpEffect;
@@ -28,7 +32,7 @@ class CarritoComponent extends PositionComponent
 
   final Set<ObstacleComponent> _platformsInContact = {};
 
-  CarritoComponent({required this.isLandscape});
+  CarritoComponent({required this.isLandscape, required this.gameState});
 
   @override
   Future<void> onLoad() async {
@@ -245,6 +249,12 @@ class CarritoComponent extends PositionComponent
     PositionComponent other,
   ) {
     super.onCollisionStart(intersectionPoints, other);
+
+    if (other is CoinComponent) {
+      gameState.addCoin();
+      other.removeFromParent();
+      return;
+    }
 
     if (other is ObstacleComponent) {
       if (other.type == ObstacleType.jumpable) {

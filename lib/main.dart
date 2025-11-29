@@ -1,17 +1,16 @@
 import 'package:carrito_run/game/game.dart';
+import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 Future<void> main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
 
   await Flame.device.fullScreen();
 
-  runApp(
-    MyApp()
-  );
+  runApp(ChangeNotifierProvider(create: (_) => GameState(), child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -39,22 +38,58 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
-  late FlameGame game;
+  late CarritoGame game;
 
   @override
   void initState() {
     super.initState();
 
-    game = CarritoGame();
+    final gameState = Provider.of<GameState>(context, listen: false);
+    game = CarritoGame(gameState: gameState);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GameWidget(
-        game: game
+      body: Stack(
+        children: [
+          GameWidget(game: game),
+          Positioned(top: 40, left: 0, right: 0, child: _buildCoinCounter()),
+        ],
       ),
+    );
+  }
+
+  Widget _buildCoinCounter() {
+    return Consumer<GameState>(
+      builder: (context, gameState, child) {
+        return Container(
+          alignment: Alignment.center,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.amber, width: 2),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.monetization_on, color: Colors.amber, size: 28),
+                SizedBox(width: 8),
+                Text(
+                  '${gameState.coins}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
