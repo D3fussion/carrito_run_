@@ -31,6 +31,13 @@ class CarritoGame extends FlameGame
   }
 
   @override
+  void update(double dt) {
+    super.update(dt);
+    // Actualizar el score basado en el tiempo
+    gameState.updateTime(dt);
+  }
+
+  @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
 

@@ -54,42 +54,106 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Stack(
         children: [
           GameWidget(game: game),
-          Positioned(top: 40, left: 0, right: 0, child: _buildCoinCounter()),
+          Positioned(top: 40, left: 0, right: 0, child: _buildGameUI()),
         ],
       ),
     );
   }
 
-  Widget _buildCoinCounter() {
+  Widget _buildGameUI() {
     return Consumer<GameState>(
       builder: (context, gameState, child) {
-        return Container(
-          alignment: Alignment.center,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.amber, width: 2),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.monetization_on, color: Colors.amber, size: 28),
-                SizedBox(width: 8),
-                Text(
-                  '${gameState.coins}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isLandscape =
+                MediaQuery.of(context).size.width >
+                MediaQuery.of(context).size.height;
+
+            if (isLandscape) {
+              // Modo horizontal: todo en la esquina superior derecha
+              return Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: EdgeInsets.only(right: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildScoreDisplay(gameState.score),
+                      SizedBox(height: 10),
+                      _buildCoinCounter(gameState.coins),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
+              );
+            } else {
+              // Modo vertical: separados en los extremos
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildScoreDisplay(gameState.score),
+                    _buildCoinCounter(gameState.coins),
+                  ],
+                ),
+              );
+            }
+          },
         );
       },
+    );
+  }
+
+  Widget _buildScoreDisplay(int score) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.blue, width: 2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.stars, color: Colors.blue, size: 28),
+          SizedBox(width: 8),
+          Text(
+            '$score',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCoinCounter(int coins) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.amber, width: 2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.monetization_on, color: Colors.amber, size: 28),
+          SizedBox(width: 8),
+          Text(
+            '$coins',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
