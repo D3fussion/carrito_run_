@@ -60,8 +60,6 @@ class StartScreen extends StatelessWidget {
                 height: 60,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // <--- Haz el onPressed ASYNC
-
                     // LÓGICA PARA MÓVIL (Bloqueo de rotación)
                     if (Platform.isAndroid || Platform.isIOS) {
                       final orientation = MediaQuery.of(context).orientation;
@@ -81,20 +79,13 @@ class StartScreen extends StatelessWidget {
                     if (Platform.isWindows ||
                         Platform.isMacOS ||
                         Platform.isLinux) {
-                      // Obtenemos el tamaño actual para asegurarnos
-                      // Size currentSize = await windowManager.getSize();
-
-                      // Bloqueamos el redimensionamiento
                       await windowManager.setResizable(false);
                     }
 
-                    // INICIAR EL JUEGO
                     game.overlays.remove('StartScreen');
                     game.overlays.add('PauseButton');
 
-                    // Pequeña espera para que el sistema procese el bloqueo
                     Future.delayed(Duration(milliseconds: 100), () {
-                      // Forzamos un resize lógico del juego por si acaso
                       game.onGameResize(game.size);
                       game.startGame();
                     });

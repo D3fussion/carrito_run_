@@ -42,10 +42,6 @@ class CarritoGame extends FlameGame
 
     _isLandscape = size.x > size.y;
 
-    // ELIMINAMOS ESTA LÍNEA:
-    // await _updateCarrito(); <--- NO LO CREES AL INICIO
-
-    // El juego carga solo el fondo y se pausa esperando al usuario
     pauseEngine();
   }
 
@@ -73,7 +69,8 @@ class CarritoGame extends FlameGame
   }
 
   void resetGame() {
-    _isPlaying = false; // Ya no estamos jugando
+    _isPlaying = false;
+    gameState.setPlaying(false);
 
     removeAll(children);
     _carrito = null;
@@ -83,7 +80,6 @@ class CarritoGame extends FlameGame
 
     gameState.reset();
 
-    // Solo cargamos el fondo, NO el carrito ni obstáculos
     _backgroundManager = BackgroundManager();
     add(_backgroundManager);
     _backgroundManager.loadInitialTheme(0);
@@ -139,9 +135,6 @@ class CarritoGame extends FlameGame
     if (_isLandscape != isCurrentlyLandscape) {
       _isLandscape = isCurrentlyLandscape;
 
-      // CORRECCIÓN CRÍTICA:
-      // Solo recreamos el carrito y los obstáculos SI estamos jugando.
-      // Si estamos en el menú, solo actualizamos la variable _isLandscape.
       if (_isPlaying) {
         _updateCarrito();
       }
@@ -150,7 +143,9 @@ class CarritoGame extends FlameGame
 
   void startGame() {
     _isPlaying = true;
-    _updateCarrito(); // Aquí sí forzamos la creación del carro
+    gameState.setPlaying(true);
+
+    _updateCarrito();
     resumeEngine();
   }
 
@@ -188,9 +183,6 @@ class CarritoGame extends FlameGame
   }
 
   Future<void> _updateCarrito() async {
-    // CORRECCIÓN: Agregamos .toList() antes de .forEach()
-    // Esto crea una "foto" de los elementos a borrar, evitando el error de modificación concurrente.
-
     children.whereType<CarritoComponent>().toList().forEach(
       (c) => c.removeFromParent(),
     );
@@ -198,7 +190,6 @@ class CarritoGame extends FlameGame
       (c) => c.removeFromParent(),
     );
 
-    // Limpieza de objetos huérfanos
     children.whereType<ObstacleComponent>().toList().forEach(
       (c) => c.removeFromParent(),
     );
@@ -209,10 +200,8 @@ class CarritoGame extends FlameGame
       (c) => c.removeFromParent(),
     );
 
-    // Esperamos un micro-instante para asegurar que Flame procese las eliminaciones
     await Future.delayed(Duration.zero);
 
-    // 2. CREACIÓN NUEVA
     _carrito = CarritoComponent(
       isLandscape: _isLandscape,
       gameState: gameState,

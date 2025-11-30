@@ -9,6 +9,10 @@ class GameState extends ChangeNotifier {
   final double _displayScoreMultiplier =
       10.0; // Multiplicador del puntaje visible
 
+  // Saber si esta jugando o no
+  bool _isPlaying = false;
+  bool get isPlaying => _isPlaying;
+
   // Sistema de gasolina
   double _fuel = 100.0;
   final double _maxFuel = 100.0;
@@ -92,6 +96,7 @@ class GameState extends ChangeNotifier {
   }
 
   void reset() {
+    _isPlaying = false;
     _coins = 0;
     _displayScore = 0;
     _internalScore = 0;
@@ -112,5 +117,10 @@ class GameState extends ChangeNotifier {
     } else {
       notifyListeners();
     }
+  }
+
+  void setPlaying(bool playing) {
+    _isPlaying = playing;
+    _safeNotifyListeners();
   }
 }

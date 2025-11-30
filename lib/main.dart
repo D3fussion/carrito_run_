@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:carrito_run/game/game.dart';
+import 'package:carrito_run/game/overlays/loading_screen.dart';
 import 'package:carrito_run/game/overlays/refuel_overlay.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:carrito_run/game/overlays/start_screen.dart';
@@ -21,7 +22,7 @@ Future<void> main() async {
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(
-      size: Size(800, 600), // Tamaño inicial sugerido
+      size: Size(800, 600),
       minimumSize: Size(400, 600),
       center: true,
       backgroundColor: Colors.transparent,
@@ -90,6 +91,7 @@ class _MyHomePageState extends State<MyHomePage> {
         children: [
           GameWidget(
             game: game,
+            loadingBuilder: (context) => const LoadingScreen(),
             overlayBuilderMap: {
               'StartScreen': (context, game) =>
                   StartScreen(game: game as CarritoGame),
@@ -111,6 +113,10 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildGameUI() {
     return Consumer<GameState>(
       builder: (context, gameState, child) {
+        if (!gameState.isPlaying) {
+          return const SizedBox.shrink();
+        }
+
         return LayoutBuilder(
           builder: (context, constraints) {
             final isLandscape =

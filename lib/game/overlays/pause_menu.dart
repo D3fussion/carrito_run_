@@ -68,8 +68,6 @@ class PauseMenu extends StatelessWidget {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // <--- ASYNC
-
                     // DESBLOQUEAR MÓVIL
                     if (Platform.isAndroid || Platform.isIOS) {
                       await SystemChrome.setPreferredOrientations([
@@ -92,7 +90,6 @@ class PauseMenu extends StatelessWidget {
                     game.overlays.add('StartScreen');
                     game.resetGame();
                   },
-                  // ... (Estilos) ...
                   child: Text('SALIR', style: TextStyle(/*...*/)),
                 ),
               ),
