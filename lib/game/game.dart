@@ -1,4 +1,5 @@
 import 'package:carrito_run/game/components/carrito_component.dart';
+import 'package:carrito_run/game/components/gas_station_component.dart';
 import 'package:carrito_run/game/managers/obstacle_spawner.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/components.dart';
@@ -23,31 +24,109 @@ class CarritoGame extends FlameGame
   bool _hasDragged = false;
   Vector2? _panStartPosition;
 
+  int _lastSection = 0;
+  int _currentTheme = 0;
+  int _lastAppliedTheme = -1;
+  bool _waitingForGasStation = false;
+
+  bool _imagesPreloaded = false;
+
   CarritoGame({required this.gameState});
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    pauseEngine(); // Pausar el juego al inicio
+
+    await _preloadImages();
+
+    pauseEngine();
+  }
+
+  Future<void> _preloadImages() async {
+    if (_imagesPreloaded) return;
+
+    await images.loadAll([
+      'road_landscape.png',
+      'road_portrait.png',
+      'borders_landscape.png',
+      'borders_portrait.png',
+      'gas_station_landscape.png',
+      'gas_station_portrait.png',
+      // Agregar aquí más imágenes de temas:
+      // 'road_landscape_theme1.png',
+      // 'road_landscape_theme2.png',
+      // etc.
+    ]);
+
+    _imagesPreloaded = true;
   }
 
   void resetGame() {
     removeAll(children);
-
     _parallaxComponent = null;
     _carrito = null;
     _obstacleSpawner = null;
-
+    _lastSection = 0;
+    _currentTheme = 0;
+    _lastAppliedTheme = -1;
+    _waitingForGasStation = false;
     gameState.reset();
-
     pauseEngine();
+  }
+
+  int _getThemeForSection(int section) {
+    return (section - 1) % 5;
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    // Actualizar el score basado en el tiempo
     gameState.updateTime(dt);
+
+    if (gameState.shouldSpawnGasStation() && !_waitingForGasStation) {
+      _lastSection = gameState.currentSection;
+      _waitingForGasStation = true;
+
+      _obstacleSpawner?.setPaused(true);
+
+      gameState.markGasStationSpawned();
+      _spawnGasStation();
+    }
+
+    final newTheme = _getThemeForSection(gameState.currentSection);
+    if (newTheme != _currentTheme) {
+      _currentTheme = newTheme;
+
+      if (_currentTheme != _lastAppliedTheme) {
+        _changeTheme();
+        _lastAppliedTheme = _currentTheme;
+      }
+    }
+  }
+
+  void _changeTheme() {
+    _updateParallaxForTheme();
+    _obstacleSpawner?.setTheme(_currentTheme);
+  }
+
+  void _spawnGasStation() {
+    final gasStation = GasStationComponent(
+      isLandscape: _isLandscape,
+      gameSpeed: 200.0,
+      gameState: gameState,
+      onReached: () {
+        pauseEngine();
+        overlays.remove('PauseButton');
+        overlays.add('RefuelOverlay');
+      },
+    );
+
+    add(gasStation);
+  }
+
+  void resumeAfterGasStation() {
+    _waitingForGasStation = false;
+    _obstacleSpawner?.setPaused(false);
   }
 
   @override
@@ -58,10 +137,10 @@ class CarritoGame extends FlameGame
 
     if (_isLandscape != isCurrentlyLandscape) {
       _isLandscape = isCurrentlyLandscape;
-      _updateParallax();
+      _updateParallaxForTheme();
       _updateCarrito();
     } else if (_parallaxComponent == null) {
-      _updateParallax();
+      _updateParallaxForTheme();
       _updateCarrito();
     }
   }
@@ -121,28 +200,30 @@ class CarritoGame extends FlameGame
       minSpawnInterval: 2.0,
       maxSpawnInterval: 4.0,
     );
+    _obstacleSpawner!.setTheme(_currentTheme);
     await add(_obstacleSpawner!);
   }
 
-  Future<void> _updateParallax() async {
+  Future<void> _updateParallaxForTheme() async {
     if (_parallaxComponent != null) {
       remove(_parallaxComponent!);
     }
 
+    final roadImage = _isLandscape ? 'road_landscape.png' : 'road_portrait.png';
+    final bordersImage = _isLandscape
+        ? 'borders_landscape.png'
+        : 'borders_portrait.png';
+
     final layers = await Future.wait([
       loadParallaxLayer(
-        ParallaxImageData(
-          _isLandscape ? 'road_landscape.png' : 'road_portrait.png',
-        ),
+        ParallaxImageData(roadImage),
         velocityMultiplier: Vector2(1.3, 1.3),
         alignment: Alignment.center,
         fill: _isLandscape ? LayerFill.height : LayerFill.width,
         repeat: _isLandscape ? ImageRepeat.repeatX : ImageRepeat.repeatY,
       ),
       loadParallaxLayer(
-        ParallaxImageData(
-          _isLandscape ? 'borders_landscape.png' : 'borders_portrait.png',
-        ),
+        ParallaxImageData(bordersImage),
         velocityMultiplier: Vector2(1.0, 1.0),
         alignment: Alignment.center,
         fill: _isLandscape ? LayerFill.height : LayerFill.width,

@@ -1,4 +1,5 @@
 import 'package:carrito_run/game/game.dart';
+import 'package:carrito_run/game/overlays/refuel_overlay.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:carrito_run/game/overlays/start_screen.dart';
 import 'package:carrito_run/game/overlays/pause_menu.dart';
@@ -65,6 +66,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   PauseMenu(game: game as CarritoGame),
               'PauseButton': (context, game) =>
                   PauseButton(game: game as CarritoGame),
+              'RefuelOverlay': (context, game) =>
+                  RefuelOverlay(game: game as CarritoGame),
             },
             initialActiveOverlays: const ['StartScreen'],
           ),
@@ -95,6 +98,13 @@ class _MyHomePageState extends State<MyHomePage> {
                       _buildScoreDisplay(gameState.score),
                       SizedBox(height: 10),
                       _buildCoinCounter(gameState.coins),
+                      SizedBox(height: 10),
+                      _buildFuelMeter(gameState.fuel, gameState.maxFuel),
+                      SizedBox(height: 10),
+                      _buildSectionDisplay(
+                        gameState.currentSection,
+                        gameState.scoreUntilNextGasStation,
+                      ),
                     ],
                   ),
                 ),
@@ -102,11 +112,26 @@ class _MyHomePageState extends State<MyHomePage> {
             } else {
               return Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    _buildScoreDisplay(gameState.score),
-                    _buildCoinCounter(gameState.coins),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildScoreDisplay(gameState.score),
+                        _buildCoinCounter(gameState.coins),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildFuelMeter(gameState.fuel, gameState.maxFuel),
+                        _buildSectionDisplay(
+                          gameState.currentSection,
+                          gameState.scoreUntilNextGasStation,
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               );
@@ -163,6 +188,87 @@ class _MyHomePageState extends State<MyHomePage> {
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFuelMeter(double fuel, double maxFuel) {
+    final percentage = fuel / maxFuel;
+    Color fuelColor;
+
+    if (percentage > 0.5) {
+      fuelColor = Colors.green;
+    } else if (percentage > 0.25) {
+      fuelColor = Colors.orange;
+    } else {
+      fuelColor = Colors.red;
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: fuelColor, width: 2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.local_gas_station, color: fuelColor, size: 28),
+          SizedBox(width: 8),
+          SizedBox(
+            width: 80,
+            child: LinearProgressIndicator(
+              value: percentage,
+              backgroundColor: Colors.grey.shade800,
+              valueColor: AlwaysStoppedAnimation<Color>(fuelColor),
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionDisplay(int section, int pointsRemaining) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.purple, width: 2),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.flag, color: Colors.purple, size: 28),
+              SizedBox(width: 8),
+              Text(
+                'Sección $section',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.local_gas_station, color: Colors.orange, size: 16),
+              SizedBox(width: 4),
+              Text(
+                '-${pointsRemaining}',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ],
           ),
         ],
       ),

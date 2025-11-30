@@ -67,7 +67,7 @@ class PauseMenu extends StatelessWidget {
                     game.overlays.remove('PauseMenu');
                     game.overlays.remove('PauseButton');
                     game.overlays.add('StartScreen');
-                    game.resetGame(); // ¡Cambiar esta línea!
+                    game.resetGame();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,

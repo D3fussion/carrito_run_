@@ -49,7 +49,9 @@ class ObstacleSpawner extends Component with HasGameReference {
   double _nextSpawnTime = 0;
   final Random _random = Random();
 
-  late List<ObstaclePattern> _patterns;
+  late Map<int, List<ObstaclePattern>> _patternsByTheme;
+  int _currentTheme = 0;
+  bool _isPaused = false;
 
   final List<_PendingObstacle> _pendingObstacles = [];
   final List<_PendingCoin> _pendingCoins = [];
@@ -68,8 +70,21 @@ class ObstacleSpawner extends Component with HasGameReference {
     _scheduleNextPattern();
   }
 
+  void setPaused(bool paused) {
+    _isPaused = paused;
+
+    if (paused) {
+      _pendingObstacles.clear();
+      _pendingCoins.clear();
+    }
+  }
+
+  void setTheme(int theme) {
+    _currentTheme = theme % 5;
+  }
+
   void _initializePatterns() {
-    _patterns = [
+    final basePatterns = [
       // Patrón 1: Línea simple de 2 saltables con monedas encima
       ObstaclePattern(
         obstacles: [
@@ -242,6 +257,14 @@ class ObstacleSpawner extends Component with HasGameReference {
         duration: 1.5,
       ),
     ];
+
+    _patternsByTheme = {
+      0: basePatterns,
+      1: basePatterns,
+      2: basePatterns,
+      3: basePatterns,
+      4: basePatterns,
+    };
   }
 
   void _scheduleNextPattern() {
@@ -253,6 +276,8 @@ class ObstacleSpawner extends Component with HasGameReference {
   @override
   void update(double dt) {
     super.update(dt);
+
+    if (_isPaused) return;
 
     _timeSinceLastSpawn += dt;
 
@@ -284,7 +309,8 @@ class ObstacleSpawner extends Component with HasGameReference {
   }
 
   void _spawnPattern() {
-    final pattern = _patterns[_random.nextInt(_patterns.length)];
+    final patterns = _patternsByTheme[_currentTheme]!;
+    final pattern = patterns[_random.nextInt(patterns.length)];
 
     for (final obstacleInfo in pattern.obstacles) {
       if (obstacleInfo.delayFromStart == 0) {
