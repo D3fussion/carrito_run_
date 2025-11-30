@@ -58,6 +58,9 @@ class StartScreen extends StatelessWidget {
                   onPressed: () {
                     game.overlays.remove('StartScreen');
                     game.overlays.add('PauseButton');
+
+                    game.onGameResize(game.size);
+
                     game.resumeEngine();
                   },
                   style: ElevatedButton.styleFrom(
