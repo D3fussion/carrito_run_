@@ -42,11 +42,15 @@ class CoinSpawnInfo {
 class ObstacleSpawner extends Component with HasGameReference {
   final bool isLandscape;
   final double gameSpeed;
-  final double minSpawnInterval;
-  final double maxSpawnInterval;
+
+  final double minSpawnGap;
+  final double maxSpawnGap;
 
   double _timeSinceLastSpawn = 0;
   double _nextSpawnTime = 0;
+
+  double _lastPatternDuration = 0.0;
+
   final Random _random = Random();
 
   late Map<int, List<ObstaclePattern>> _patternsByTheme;
@@ -59,20 +63,20 @@ class ObstacleSpawner extends Component with HasGameReference {
   ObstacleSpawner({
     required this.isLandscape,
     this.gameSpeed = 200.0,
-    this.minSpawnInterval = 1.5,
-    this.maxSpawnInterval = 3.0,
-  });
+    double minSpawnInterval = 0.5,
+    double maxSpawnInterval = 1.5,
+  }) : minSpawnGap = minSpawnInterval,
+       maxSpawnGap = maxSpawnInterval;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     _initializePatterns();
-    _scheduleNextPattern();
+    _nextSpawnTime = 1.0;
   }
 
   void setPaused(bool paused) {
     _isPaused = paused;
-
     if (paused) {
       _pendingObstacles.clear();
       _pendingCoins.clear();
@@ -85,7 +89,7 @@ class ObstacleSpawner extends Component with HasGameReference {
 
   void _initializePatterns() {
     final basePatterns = [
-      // Patrón 1: Línea simple de 2 saltables con monedas encima
+      // Patrón 1 (Duración 1.5)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
@@ -105,8 +109,7 @@ class ObstacleSpawner extends Component with HasGameReference {
         ],
         duration: 1.5,
       ),
-
-      // Patrón 2: Zigzag de no saltables con monedas en carriles libres
+      // Patrón 2 (Duración 2.0)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
@@ -132,8 +135,7 @@ class ObstacleSpawner extends Component with HasGameReference {
         ],
         duration: 2.0,
       ),
-
-      // Patrón 3: Muro con hueco y monedas en el hueco
+      // Patrón 3 (Duración 1.5)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
@@ -160,8 +162,7 @@ class ObstacleSpawner extends Component with HasGameReference {
         coins: [CoinSpawnInfo(lane: 2, delayFromStart: 0.0)],
         duration: 1.5,
       ),
-
-      // Patrón 4: Escalera de saltables con monedas arriba
+      // Patrón 4 (Duración 2.0)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
@@ -199,8 +200,7 @@ class ObstacleSpawner extends Component with HasGameReference {
         ],
         duration: 2.0,
       ),
-
-      // Patrón 5: Mixto - saltable con moneda seguido de muro
+      // Patrón 5 (Duración 2.5)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
@@ -230,8 +230,7 @@ class ObstacleSpawner extends Component with HasGameReference {
         ],
         duration: 2.5,
       ),
-
-      // Patrón 6: Carriles alternos con monedas en medio
+      // Patrón 6 (Duración 1.5)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
@@ -268,9 +267,10 @@ class ObstacleSpawner extends Component with HasGameReference {
   }
 
   void _scheduleNextPattern() {
-    _nextSpawnTime =
-        minSpawnInterval +
-        _random.nextDouble() * (maxSpawnInterval - minSpawnInterval);
+    final randomGap =
+        minSpawnGap + _random.nextDouble() * (maxSpawnGap - minSpawnGap);
+
+    _nextSpawnTime = _lastPatternDuration + randomGap;
   }
 
   @override
@@ -283,7 +283,6 @@ class ObstacleSpawner extends Component with HasGameReference {
 
     _pendingObstacles.removeWhere((pending) {
       pending.timeUntilSpawn -= dt;
-
       if (pending.timeUntilSpawn <= 0) {
         _spawnObstacle(pending.lane, pending.type);
         return true;
@@ -293,7 +292,6 @@ class ObstacleSpawner extends Component with HasGameReference {
 
     _pendingCoins.removeWhere((pending) {
       pending.timeUntilSpawn -= dt;
-
       if (pending.timeUntilSpawn <= 0) {
         _spawnCoin(pending.lane, pending.isOnObstacle);
         return true;
@@ -311,6 +309,8 @@ class ObstacleSpawner extends Component with HasGameReference {
   void _spawnPattern() {
     final patterns = _patternsByTheme[_currentTheme]!;
     final pattern = patterns[_random.nextInt(patterns.length)];
+
+    _lastPatternDuration = pattern.duration;
 
     for (final obstacleInfo in pattern.obstacles) {
       if (obstacleInfo.delayFromStart == 0) {
@@ -348,7 +348,6 @@ class ObstacleSpawner extends Component with HasGameReference {
       type: type,
       gameSpeed: gameSpeed,
     );
-
     game.add(obstacle);
   }
 
@@ -359,7 +358,6 @@ class ObstacleSpawner extends Component with HasGameReference {
       gameSpeed: gameSpeed,
       isOnObstacle: isOnObstacle,
     );
-
     game.add(coin);
   }
 }
