@@ -1,5 +1,8 @@
 import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/states/game_state.dart';
+import 'package:carrito_run/game/overlays/start_screen.dart';
+import 'package:carrito_run/game/overlays/pause_menu.dart';
+import 'package:carrito_run/game/overlays/pause_button.dart';
 import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -53,7 +56,18 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       body: Stack(
         children: [
-          GameWidget(game: game),
+          GameWidget(
+            game: game,
+            overlayBuilderMap: {
+              'StartScreen': (context, game) =>
+                  StartScreen(game: game as CarritoGame),
+              'PauseMenu': (context, game) =>
+                  PauseMenu(game: game as CarritoGame),
+              'PauseButton': (context, game) =>
+                  PauseButton(game: game as CarritoGame),
+            },
+            initialActiveOverlays: const ['StartScreen'],
+          ),
           Positioned(top: 40, left: 0, right: 0, child: _buildGameUI()),
         ],
       ),
@@ -70,11 +84,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 MediaQuery.of(context).size.height;
 
             if (isLandscape) {
-              // Modo horizontal: todo en la esquina superior derecha
               return Align(
                 alignment: Alignment.topRight,
                 child: Padding(
-                  padding: EdgeInsets.only(right: 20),
+                  padding: EdgeInsets.only(right: 80),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
@@ -87,7 +100,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               );
             } else {
-              // Modo vertical: separados en los extremos
               return Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Row(

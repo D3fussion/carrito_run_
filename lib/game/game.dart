@@ -28,6 +28,19 @@ class CarritoGame extends FlameGame
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    pauseEngine(); // Pausar el juego al inicio
+  }
+
+  void resetGame() {
+    removeAll(children);
+
+    _parallaxComponent = null;
+    _carrito = null;
+    _obstacleSpawner = null;
+
+    gameState.reset();
+
+    pauseEngine();
   }
 
   @override

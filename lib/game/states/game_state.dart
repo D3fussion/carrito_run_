@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 class GameState extends ChangeNotifier {
   int _coins = 0;
@@ -12,19 +13,30 @@ class GameState extends ChangeNotifier {
 
   void addCoin() {
     _coins++;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void updateTime(double dt) {
     _timeElapsed += dt;
     _score = (_timeElapsed * _scoreMultiplier).toInt();
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void reset() {
     _coins = 0;
     _score = 0;
     _timeElapsed = 0.0;
-    notifyListeners();
+    _safeNotifyListeners();
+  }
+
+  void _safeNotifyListeners() {
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
+    } else {
+      notifyListeners();
+    }
   }
 }
