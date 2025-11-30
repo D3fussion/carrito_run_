@@ -1,12 +1,10 @@
 import 'package:carrito_run/game/components/carrito_component.dart';
 import 'package:carrito_run/game/components/gas_station_component.dart';
+import 'package:carrito_run/game/managers/background_manager.dart';
 import 'package:carrito_run/game/managers/obstacle_spawner.dart';
 import 'package:carrito_run/game/states/game_state.dart';
-import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flame/parallax.dart';
-import 'package:flutter/material.dart';
 
 class CarritoGame extends FlameGame
     with
@@ -16,7 +14,7 @@ class CarritoGame extends FlameGame
         HasCollisionDetection {
   final GameState gameState;
 
-  ParallaxComponent? _parallaxComponent;
+  late BackgroundManager _backgroundManager;
   CarritoComponent? _carrito;
   bool _isLandscape = false;
   ObstacleSpawner? _obstacleSpawner;
@@ -24,11 +22,8 @@ class CarritoGame extends FlameGame
   bool _hasDragged = false;
   Vector2? _panStartPosition;
 
-  int _lastSection = 0;
   int _currentTheme = 0;
-  int _lastAppliedTheme = -1;
   bool _waitingForGasStation = false;
-
   bool _imagesPreloaded = false;
 
   CarritoGame({required this.gameState});
@@ -36,8 +31,14 @@ class CarritoGame extends FlameGame
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    await _preloadImages(); // Asegúrate de tener tus imágenes 0, 1, 2...
 
-    await _preloadImages();
+    // Inicializamos el manager
+    _backgroundManager = BackgroundManager();
+    await add(_backgroundManager);
+
+    // Cargamos el primer tema
+    await _backgroundManager.loadInitialTheme(0);
 
     pauseEngine();
   }
@@ -45,30 +46,37 @@ class CarritoGame extends FlameGame
   Future<void> _preloadImages() async {
     if (_imagesPreloaded) return;
 
+    // Cargar assets base
     await images.loadAll([
-      'road_landscape.png',
-      'road_portrait.png',
-      'borders_landscape.png',
-      'borders_portrait.png',
       'gas_station_landscape.png',
       'gas_station_portrait.png',
-      // Agregar aquí más imágenes de temas:
-      // 'road_landscape_theme1.png',
-      // 'road_landscape_theme2.png',
-      // etc.
+      'carrito_landscape.png',
+      'carrito_portrait.png',
+      'coin.png',
+      'obstacle_jumpable.png',
+      'obstacle_nonjumpable.png',
     ]);
+
+    // Cargar assets de temas (0 al 4)
+    for (int i = 0; i < 5; i++) {
+      await images.load('road_landscape_$i.png');
+      await images.load('road_portrait_$i.png');
+      await images.load('borders_landscape_$i.png');
+      await images.load('borders_portrait_$i.png');
+    }
 
     _imagesPreloaded = true;
   }
 
   void resetGame() {
-    removeAll(children);
-    _parallaxComponent = null;
     _carrito = null;
     _obstacleSpawner = null;
-    _lastSection = 0;
     _currentTheme = 0;
-    _lastAppliedTheme = -1;
+    removeAll(children);
+    remove(_backgroundManager);
+    _backgroundManager = BackgroundManager();
+    add(_backgroundManager);
+    _backgroundManager.loadInitialTheme(0);
     _waitingForGasStation = false;
     gameState.reset();
     pauseEngine();
@@ -84,32 +92,19 @@ class CarritoGame extends FlameGame
     gameState.updateTime(dt);
 
     if (gameState.shouldSpawnGasStation() && !_waitingForGasStation) {
-      _lastSection = gameState.currentSection;
       _waitingForGasStation = true;
-
       _obstacleSpawner?.setPaused(true);
-
       gameState.markGasStationSpawned();
       _spawnGasStation();
     }
 
-    final newTheme = _getThemeForSection(gameState.currentSection);
-    if (newTheme != _currentTheme) {
-      _currentTheme = newTheme;
-
-      if (_currentTheme != _lastAppliedTheme) {
-        _changeTheme();
-        _lastAppliedTheme = _currentTheme;
-      }
-    }
-  }
-
-  void _changeTheme() {
-    _updateParallaxForTheme();
-    _obstacleSpawner?.setTheme(_currentTheme);
+    // NOTA: Eliminamos la lógica de cambio de tema automático aquí
+    // Ahora lo maneja la gasolinera.
   }
 
   void _spawnGasStation() {
+    final nextThemeIndex = _getThemeForSection(gameState.currentSection);
+
     final gasStation = GasStationComponent(
       isLandscape: _isLandscape,
       gameSpeed: 200.0,
@@ -122,6 +117,10 @@ class CarritoGame extends FlameGame
     );
 
     add(gasStation);
+
+    // AQUI ESTÁ LA CLAVE:
+    // Le decimos al manager que inicie la transición visual usando esta gasolinera
+    _backgroundManager.startTransition(nextThemeIndex, gasStation);
   }
 
   void resumeAfterGasStation() {
@@ -132,19 +131,17 @@ class CarritoGame extends FlameGame
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-
+    // Solo actualizamos variables de estado, el BackgroundManager se redimensiona solo
     final isCurrentlyLandscape = size.x > size.y;
-
     if (_isLandscape != isCurrentlyLandscape) {
       _isLandscape = isCurrentlyLandscape;
-      _updateParallaxForTheme();
       _updateCarrito();
-    } else if (_parallaxComponent == null) {
-      _updateParallaxForTheme();
-      _updateCarrito();
+      // Si cambias de orientación drásticamente, podrías querer recargar el fondo
+      // o dejar que el manager maneje el resize (ya lo hace en su código).
     }
   }
 
+  // ... (MÉTODOS DE INPUT: onPanStart, onPanUpdate, etc. se mantienen igual) ...
   @override
   void onPanStart(DragStartInfo info) {
     _hasDragged = false;
@@ -154,7 +151,6 @@ class CarritoGame extends FlameGame
   @override
   void onPanUpdate(DragUpdateInfo info) {
     _hasDragged = true;
-
     if (_carrito != null) {
       _carrito!.handleDrag(info.delta.global);
     }
@@ -180,13 +176,8 @@ class CarritoGame extends FlameGame
   }
 
   Future<void> _updateCarrito() async {
-    if (_carrito != null) {
-      remove(_carrito!);
-    }
-
-    if (_obstacleSpawner != null) {
-      remove(_obstacleSpawner!);
-    }
+    if (_carrito != null) remove(_carrito!);
+    if (_obstacleSpawner != null) remove(_obstacleSpawner!);
 
     _carrito = CarritoComponent(
       isLandscape: _isLandscape,
@@ -197,49 +188,8 @@ class CarritoGame extends FlameGame
     _obstacleSpawner = ObstacleSpawner(
       isLandscape: _isLandscape,
       gameSpeed: 200.0,
-      minSpawnInterval: 2.0,
-      maxSpawnInterval: 4.0,
     );
     _obstacleSpawner!.setTheme(_currentTheme);
     await add(_obstacleSpawner!);
-  }
-
-  Future<void> _updateParallaxForTheme() async {
-    if (_parallaxComponent != null) {
-      remove(_parallaxComponent!);
-    }
-
-    final roadImage = _isLandscape ? 'road_landscape.png' : 'road_portrait.png';
-    final bordersImage = _isLandscape
-        ? 'borders_landscape.png'
-        : 'borders_portrait.png';
-
-    final layers = await Future.wait([
-      loadParallaxLayer(
-        ParallaxImageData(roadImage),
-        velocityMultiplier: Vector2(1.3, 1.3),
-        alignment: Alignment.center,
-        fill: _isLandscape ? LayerFill.height : LayerFill.width,
-        repeat: _isLandscape ? ImageRepeat.repeatX : ImageRepeat.repeatY,
-      ),
-      loadParallaxLayer(
-        ParallaxImageData(bordersImage),
-        velocityMultiplier: Vector2(1.0, 1.0),
-        alignment: Alignment.center,
-        fill: _isLandscape ? LayerFill.height : LayerFill.width,
-        repeat: _isLandscape ? ImageRepeat.repeatX : ImageRepeat.repeatY,
-      ),
-    ]);
-
-    final parallax = ParallaxComponent(
-      parallax: Parallax(
-        layers,
-        baseVelocity: _isLandscape ? Vector2(-80, 0) : Vector2(0, 80),
-      ),
-      priority: -1,
-    );
-
-    _parallaxComponent = parallax;
-    add(_parallaxComponent!);
   }
 }
