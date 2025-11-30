@@ -138,9 +138,6 @@ class CarritoComponent extends PositionComponent
                 startScale + (jumpScale - startScale) * jumpCurve;
 
             _visualSprite.scale = Vector2.all(scaleValue);
-
-            final height = 4 * progress * (1 - progress) * size.y * 0.5;
-            print('Progreso: $progress, Altura: $height, Escala: $scaleValue');
           }, EffectController(duration: jumpDuration))
           ..onComplete = () {
             _isJumping = false;
@@ -259,13 +256,11 @@ class CarritoComponent extends PositionComponent
     if (other is ObstacleComponent) {
       if (other.type == ObstacleType.jumpable) {
         if (_isJumping) {
-          print("hola - aterrizando en plataforma");
           _platformsInContact.add(other);
           _isOnObstacle = true;
           _stopJumpEffect();
           return;
         } else if (_isOnObstacle && _platformsInContact.isNotEmpty) {
-          print("Moviéndose a plataforma adyacente");
           _platformsInContact.add(other);
           return;
         } else {
@@ -297,12 +292,6 @@ class CarritoComponent extends PositionComponent
               ),
             );
           }
-
-          debugPrint("Adios - dejando todas las plataformas");
-        } else {
-          debugPrint(
-            "Aún en contacto con ${_platformsInContact.length} plataforma(s)",
-          );
         }
       }
     }
