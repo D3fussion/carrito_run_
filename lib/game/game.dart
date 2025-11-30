@@ -20,6 +20,7 @@ class CarritoGame extends FlameGame
   CarritoComponent? _carrito;
   bool _isLandscape = false;
   ObstacleSpawner? _obstacleSpawner;
+  bool _isPlaying = false;
 
   bool _hasDragged = false;
   Vector2? _panStartPosition;
@@ -35,21 +36,16 @@ class CarritoGame extends FlameGame
     await super.onLoad();
     await _preloadImages();
 
-    // Inicializamos el manager de fondos
     _backgroundManager = BackgroundManager();
     add(_backgroundManager);
-
-    // Cargamos el primer tema
     await _backgroundManager.loadInitialTheme(0);
 
-    // --- CORRECCIÓN ---
-    // Determinamos la orientación inicial correctamente
     _isLandscape = size.x > size.y;
 
-    // Forzamos la creación inicial del carrito y el spawner
-    await _updateCarrito();
-    // -------------------
+    // ELIMINAMOS ESTA LÍNEA:
+    // await _updateCarrito(); <--- NO LO CREES AL INICIO
 
+    // El juego carga solo el fondo y se pausa esperando al usuario
     pauseEngine();
   }
 
@@ -77,8 +73,9 @@ class CarritoGame extends FlameGame
   }
 
   void resetGame() {
-    removeAll(children);
+    _isPlaying = false; // Ya no estamos jugando
 
+    removeAll(children);
     _carrito = null;
     _obstacleSpawner = null;
     _currentTheme = 0;
@@ -86,11 +83,10 @@ class CarritoGame extends FlameGame
 
     gameState.reset();
 
+    // Solo cargamos el fondo, NO el carrito ni obstáculos
     _backgroundManager = BackgroundManager();
     add(_backgroundManager);
     _backgroundManager.loadInitialTheme(0);
-
-    _updateCarrito();
 
     pauseEngine();
   }
@@ -139,10 +135,23 @@ class CarritoGame extends FlameGame
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
     final isCurrentlyLandscape = size.x > size.y;
+
     if (_isLandscape != isCurrentlyLandscape) {
       _isLandscape = isCurrentlyLandscape;
-      _updateCarrito();
+
+      // CORRECCIÓN CRÍTICA:
+      // Solo recreamos el carrito y los obstáculos SI estamos jugando.
+      // Si estamos en el menú, solo actualizamos la variable _isLandscape.
+      if (_isPlaying) {
+        _updateCarrito();
+      }
     }
+  }
+
+  void startGame() {
+    _isPlaying = true;
+    _updateCarrito(); // Aquí sí forzamos la creación del carro
+    resumeEngine();
   }
 
   @override
@@ -179,19 +188,31 @@ class CarritoGame extends FlameGame
   }
 
   Future<void> _updateCarrito() async {
-    children.whereType<CarritoComponent>().forEach((c) => c.removeFromParent());
-    children.whereType<ObstacleSpawner>().forEach((c) => c.removeFromParent());
+    // CORRECCIÓN: Agregamos .toList() antes de .forEach()
+    // Esto crea una "foto" de los elementos a borrar, evitando el error de modificación concurrente.
 
-    children.whereType<ObstacleComponent>().forEach(
+    children.whereType<CarritoComponent>().toList().forEach(
       (c) => c.removeFromParent(),
     );
-    children.whereType<CoinComponent>().forEach((c) => c.removeFromParent());
-    children.whereType<GasStationComponent>().forEach(
+    children.whereType<ObstacleSpawner>().toList().forEach(
       (c) => c.removeFromParent(),
     );
 
+    // Limpieza de objetos huérfanos
+    children.whereType<ObstacleComponent>().toList().forEach(
+      (c) => c.removeFromParent(),
+    );
+    children.whereType<CoinComponent>().toList().forEach(
+      (c) => c.removeFromParent(),
+    );
+    children.whereType<GasStationComponent>().toList().forEach(
+      (c) => c.removeFromParent(),
+    );
+
+    // Esperamos un micro-instante para asegurar que Flame procese las eliminaciones
     await Future.delayed(Duration.zero);
 
+    // 2. CREACIÓN NUEVA
     _carrito = CarritoComponent(
       isLandscape: _isLandscape,
       gameState: gameState,

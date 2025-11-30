@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:carrito_run/game/game.dart';
+import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
 
 class PauseMenu extends StatelessWidget {
   final CarritoGame game;
@@ -63,26 +67,33 @@ class PauseMenu extends StatelessWidget {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    // <--- ASYNC
+
+                    // DESBLOQUEAR MÓVIL
+                    if (Platform.isAndroid || Platform.isIOS) {
+                      await SystemChrome.setPreferredOrientations([
+                        DeviceOrientation.portraitUp,
+                        DeviceOrientation.landscapeLeft,
+                        DeviceOrientation.landscapeRight,
+                      ]);
+                    }
+
+                    // DESBLOQUEAR ESCRITORIO
+                    if (Platform.isWindows ||
+                        Platform.isMacOS ||
+                        Platform.isLinux) {
+                      await windowManager.setResizable(true);
+                    }
+
+                    // SALIR
                     game.overlays.remove('PauseMenu');
                     game.overlays.remove('PauseButton');
                     game.overlays.add('StartScreen');
                     game.resetGame();
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                  child: Text(
-                    'SALIR',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  // ... (Estilos) ...
+                  child: Text('SALIR', style: TextStyle(/*...*/)),
                 ),
               ),
             ],

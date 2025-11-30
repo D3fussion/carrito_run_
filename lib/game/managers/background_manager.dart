@@ -12,6 +12,10 @@ class BackgroundManager extends PositionComponent
 
   bool _isTransitioning = false;
 
+  // NUEVAS VARIABLES PARA MANEJAR EL CAMBIO DE GIRO
+  int _currentThemeIndex = 0;
+  bool _lastWasLandscape = false;
+
   BackgroundManager() {
     priority = -10;
   }
@@ -20,6 +24,8 @@ class BackgroundManager extends PositionComponent
   Future<void> onLoad() async {
     await super.onLoad();
     size = game.size;
+    // Guardamos la orientación inicial
+    _lastWasLandscape = game.size.x > game.size.y;
   }
 
   @override
@@ -27,15 +33,42 @@ class BackgroundManager extends PositionComponent
     super.onGameResize(size);
     this.size = size;
 
-    _currentParallax?.size = size;
-    _currentParallax?.parallax?.resize(size);
+    // Detectamos si la orientación cambió realmente
+    bool isNowLandscape = size.x > size.y;
 
-    _nextParallax?.size = size;
-    _nextParallax?.parallax?.resize(size);
-    // -----------------------
+    if (_lastWasLandscape != isNowLandscape) {
+      // SI CAMBIÓ LA ORIENTACIÓN: Recargamos las imágenes
+      _lastWasLandscape = isNowLandscape;
+      _reloadCurrentBackground();
+    } else {
+      // SI SOLO CAMBIÓ EL TAMAÑO (pero no la orientación): Solo ajustamos
+      _currentParallax?.size = size;
+      _currentParallax?.parallax?.resize(size);
+
+      _nextParallax?.size = size;
+      _nextParallax?.parallax?.resize(size);
+    }
+  }
+
+  // MÉTODO NUEVO: Cambia la imagen (Landscape <-> Portrait) en caliente
+  Future<void> _reloadCurrentBackground() async {
+    // 1. Cargamos el nuevo parallax con la orientación correcta
+    // Usamos _currentThemeIndex para saber qué carretera poner (tierra, asfalto, etc.)
+    final newParallax = await _createParallaxForTheme(_currentThemeIndex);
+
+    // 2. Reemplazamos el actual
+    _currentParallax = newParallax;
+
+    // 3. Si justo estábamos en medio de una transición (raro en el menú, pero posible)
+    if (_isTransitioning && _nextParallax != null) {
+      // Calculamos cuál era el siguiente tema y lo recargamos también
+      int nextTheme = (_currentThemeIndex + 1) % 5;
+      _nextParallax = await _createParallaxForTheme(nextTheme);
+    }
   }
 
   Future<void> loadInitialTheme(int themeIndex) async {
+    _currentThemeIndex = themeIndex; // Guardamos qué tema es
     _currentParallax = await _createParallaxForTheme(themeIndex);
   }
 
@@ -64,7 +97,7 @@ class BackgroundManager extends PositionComponent
 
     final component = await ParallaxComponent.load(
       [ParallaxImageData(roadImage), ParallaxImageData(bordersImage)],
-      baseVelocity: isLandscape ? Vector2(-80, 0) : Vector2(0, 80),
+      baseVelocity: isLandscape ? Vector2(80, 0) : Vector2(0, -80),
       images: game.images,
       repeat: isLandscape ? ImageRepeat.repeatX : ImageRepeat.repeatY,
       alignment: Alignment.center,
@@ -115,6 +148,10 @@ class BackgroundManager extends PositionComponent
 
     _currentParallax = _nextParallax;
     _nextParallax = null;
+
+    // IMPORTANTE: Actualizamos el índice del tema actual al terminar la transición
+    // Para que si giramos la pantalla después, sepamos en qué tema estamos.
+    _currentThemeIndex = (_currentThemeIndex + 1) % 5;
   }
 
   @override

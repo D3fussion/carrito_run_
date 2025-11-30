@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:carrito_run/game/game.dart';
+import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
 
 class StartScreen extends StatelessWidget {
   final CarritoGame game;
@@ -55,13 +59,45 @@ class StartScreen extends StatelessWidget {
                 width: 200,
                 height: 60,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    // <--- Haz el onPressed ASYNC
+
+                    // LÓGICA PARA MÓVIL (Bloqueo de rotación)
+                    if (Platform.isAndroid || Platform.isIOS) {
+                      final orientation = MediaQuery.of(context).orientation;
+                      if (orientation == Orientation.landscape) {
+                        SystemChrome.setPreferredOrientations([
+                          DeviceOrientation.landscapeLeft,
+                          DeviceOrientation.landscapeRight,
+                        ]);
+                      } else {
+                        SystemChrome.setPreferredOrientations([
+                          DeviceOrientation.portraitUp,
+                        ]);
+                      }
+                    }
+
+                    // LÓGICA PARA ESCRITORIO (Bloqueo de ventana)
+                    if (Platform.isWindows ||
+                        Platform.isMacOS ||
+                        Platform.isLinux) {
+                      // Obtenemos el tamaño actual para asegurarnos
+                      // Size currentSize = await windowManager.getSize();
+
+                      // Bloqueamos el redimensionamiento
+                      await windowManager.setResizable(false);
+                    }
+
+                    // INICIAR EL JUEGO
                     game.overlays.remove('StartScreen');
                     game.overlays.add('PauseButton');
 
-                    game.onGameResize(game.size);
-
-                    game.resumeEngine();
+                    // Pequeña espera para que el sistema procese el bloqueo
+                    Future.delayed(Duration(milliseconds: 100), () {
+                      // Forzamos un resize lógico del juego por si acaso
+                      game.onGameResize(game.size);
+                      game.startGame();
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,

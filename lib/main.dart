@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/overlays/refuel_overlay.dart';
 import 'package:carrito_run/game/states/game_state.dart';
@@ -7,12 +9,41 @@ import 'package:carrito_run/game/overlays/pause_button.dart';
 import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Flame.device.fullScreen();
+  // Configuración para ESCRITORIO (Windows/Mac/Linux)
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    await windowManager.ensureInitialized();
+
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(800, 600), // Tamaño inicial sugerido
+      minimumSize: Size(400, 600),
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+    );
+
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
+  // Configuración para MÓVIL (Bloqueo de rotación inicial permisivo)
+  if (Platform.isAndroid || Platform.isIOS) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    await Flame.device.fullScreen();
+  }
 
   runApp(ChangeNotifierProvider(create: (_) => GameState(), child: MyApp()));
 }
