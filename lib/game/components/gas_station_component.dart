@@ -8,7 +8,7 @@ class GasStationComponent extends SpriteComponent with HasGameReference {
   final Function() onReached;
 
   bool _hasTriggered = false;
-  bool _hasSwitchedTheme = false; // <--- Para asegurar que solo cambie una vez
+  bool _hasSwitchedTheme = false;
 
   GasStationComponent({
     required this.isLandscape,
@@ -25,8 +25,7 @@ class GasStationComponent extends SpriteComponent with HasGameReference {
       isLandscape ? 'gas_station_landscape.png' : 'gas_station_portrait.png',
     );
 
-    priority =
-        1; // La gasolinera debe estar detrás del carro pero frente al fondo
+    priority = 1;
     _updateSize();
     anchor = Anchor.center;
     _updatePosition();
@@ -67,13 +66,11 @@ class GasStationComponent extends SpriteComponent with HasGameReference {
     if (isLandscape) {
       position.x -= gameSpeed * dt;
 
-      // Detectar cuando llega al jugador (para el menú de gasolina)
       if (!_hasTriggered && position.x <= 100) {
         _hasTriggered = true;
         onReached();
       }
 
-      // Detectar cuando pasa por el CENTRO (para cambiar el fondo)
       if (!_hasSwitchedTheme && position.x <= gameSize.x / 2) {
         _hasSwitchedTheme = true;
       }
@@ -89,7 +86,6 @@ class GasStationComponent extends SpriteComponent with HasGameReference {
         onReached();
       }
 
-      // Detectar cuando pasa por el CENTRO (para cambiar el fondo)
       if (!_hasSwitchedTheme && position.y >= gameSize.y / 2) {
         _hasSwitchedTheme = true;
       }

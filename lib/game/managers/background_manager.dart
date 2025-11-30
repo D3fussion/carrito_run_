@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/parallax.dart';
 import 'package:carrito_run/game/game.dart';
@@ -28,9 +27,6 @@ class BackgroundManager extends PositionComponent
     super.onGameResize(size);
     this.size = size;
 
-    // --- CORRECCIÓN AQUÍ ---
-    // No llamamos a onGameResize del componente, sino al resize del Parallax interno.
-    // Esto evita que busque la referencia 'game' que no tiene.
     _currentParallax?.size = size;
     _currentParallax?.parallax?.resize(size);
 
@@ -78,7 +74,6 @@ class BackgroundManager extends PositionComponent
     component.parallax?.layers[0].velocityMultiplier = Vector2(1.3, 1.3);
     component.parallax?.layers[1].velocityMultiplier = Vector2(1.0, 1.0);
 
-    // Configuración manual del tamaño inicial
     component.size = game.size;
     component.parallax?.resize(game.size);
 
@@ -137,7 +132,6 @@ class BackgroundManager extends PositionComponent
     double splitX = station.position.x;
     double splitY = station.position.y;
 
-    // 1. DIBUJAR FONDO VIEJO
     canvas.save();
     if (isLandscape) {
       canvas.clipRect(Rect.fromLTWH(0, 0, splitX, size.y));
@@ -147,7 +141,6 @@ class BackgroundManager extends PositionComponent
     _currentParallax?.render(canvas);
     canvas.restore();
 
-    // 2. DIBUJAR FONDO NUEVO
     canvas.save();
     if (isLandscape) {
       canvas.clipRect(Rect.fromLTWH(splitX, 0, size.x - splitX, size.y));
