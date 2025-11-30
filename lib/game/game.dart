@@ -35,10 +35,20 @@ class CarritoGame extends FlameGame
     await super.onLoad();
     await _preloadImages();
 
+    // Inicializamos el manager de fondos
     _backgroundManager = BackgroundManager();
-    await add(_backgroundManager);
+    add(_backgroundManager);
 
+    // Cargamos el primer tema
     await _backgroundManager.loadInitialTheme(0);
+
+    // --- CORRECCIÓN ---
+    // Determinamos la orientación inicial correctamente
+    _isLandscape = size.x > size.y;
+
+    // Forzamos la creación inicial del carrito y el spawner
+    await _updateCarrito();
+    // -------------------
 
     pauseEngine();
   }
