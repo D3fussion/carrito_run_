@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:carrito_run/game/game.dart';
 import 'package:flutter/services.dart';
@@ -69,7 +68,9 @@ class PauseMenu extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () async {
                     // DESBLOQUEAR MÓVIL
-                    if (Platform.isAndroid || Platform.isIOS) {
+                    if (!kIsWeb &&
+                        (defaultTargetPlatform == TargetPlatform.android ||
+                            defaultTargetPlatform == TargetPlatform.iOS)) {
                       await SystemChrome.setPreferredOrientations([
                         DeviceOrientation.portraitUp,
                         DeviceOrientation.landscapeLeft,
@@ -78,9 +79,10 @@ class PauseMenu extends StatelessWidget {
                     }
 
                     // DESBLOQUEAR ESCRITORIO
-                    if (Platform.isWindows ||
-                        Platform.isMacOS ||
-                        Platform.isLinux) {
+                    if (!kIsWeb &&
+                        (defaultTargetPlatform == TargetPlatform.windows ||
+                            defaultTargetPlatform == TargetPlatform.macOS ||
+                            defaultTargetPlatform == TargetPlatform.linux)) {
                       await windowManager.setResizable(true);
                     }
 

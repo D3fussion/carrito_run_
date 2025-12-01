@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/overlays/loading_screen.dart';
 import 'package:carrito_run/game/overlays/refuel_overlay.dart';
@@ -17,8 +16,11 @@ import 'package:window_manager/window_manager.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Configuración para ESCRITORIO (Windows/Mac/Linux)
-  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+  // 1. CONFIGURACIÓN PARA ESCRITORIO
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.linux)) {
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(
@@ -36,8 +38,10 @@ Future<void> main() async {
     });
   }
 
-  // Configuración para MÓVIL (Bloqueo de rotación inicial permisivo)
-  if (Platform.isAndroid || Platform.isIOS) {
+  // 2. CONFIGURACIÓN PARA MÓVIL
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS)) {
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.landscapeLeft,

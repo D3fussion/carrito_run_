@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:carrito_run/game/game.dart';
 import 'package:flutter/services.dart';
@@ -60,8 +59,10 @@ class StartScreen extends StatelessWidget {
                 height: 60,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // LÓGICA PARA MÓVIL (Bloqueo de rotación)
-                    if (Platform.isAndroid || Platform.isIOS) {
+                    // LÓGICA PARA MÓVIL (Solo si no es Web)
+                    if (!kIsWeb &&
+                        (defaultTargetPlatform == TargetPlatform.android ||
+                            defaultTargetPlatform == TargetPlatform.iOS)) {
                       final orientation = MediaQuery.of(context).orientation;
                       if (orientation == Orientation.landscape) {
                         SystemChrome.setPreferredOrientations([
@@ -75,19 +76,21 @@ class StartScreen extends StatelessWidget {
                       }
                     }
 
-                    // LÓGICA PARA ESCRITORIO (Bloqueo de ventana)
-                    if (Platform.isWindows ||
-                        Platform.isMacOS ||
-                        Platform.isLinux) {
+                    // LÓGICA PARA ESCRITORIO (Solo si no es Web)
+                    if (!kIsWeb &&
+                        (defaultTargetPlatform == TargetPlatform.windows ||
+                            defaultTargetPlatform == TargetPlatform.macOS ||
+                            defaultTargetPlatform == TargetPlatform.linux)) {
                       await windowManager.setResizable(false);
                     }
 
+                    // INICIAR EL JUEGO
                     game.overlays.remove('StartScreen');
                     game.overlays.add('PauseButton');
 
                     Future.delayed(Duration(milliseconds: 100), () {
                       game.onGameResize(game.size);
-                      game.startGame();
+                      game.startGame(); // <--- Recuerda usar startGame() que creamos antes
                     });
                   },
                   style: ElevatedButton.styleFrom(
