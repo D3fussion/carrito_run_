@@ -32,7 +32,7 @@ class GameState extends ChangeNotifier {
 
   // Velocidad del juego
   final double _baseSpeed = 400.0; // Velocidad inicial (Sección 1)
-  final double _maxSpeed = 1200.0; // Velocidad máxima (Sección 11 en adelante)
+  final double _maxSpeed = 1000.0; // Velocidad máxima (Sección 11 en adelante)
   final int _maxSpeedSection = 11; // Nivel donde se alcanza el máximo
 
   double get currentSpeed {

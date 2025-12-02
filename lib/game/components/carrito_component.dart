@@ -1,5 +1,4 @@
 import 'package:carrito_run/game/components/coin_component.dart';
-import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -7,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame/collisions.dart';
 import 'obstacle_component.dart';
+import 'package:carrito_run/game/game.dart';
 
 class CarritoComponent extends PositionComponent
     with KeyboardHandler, HasGameReference<CarritoGame>, CollisionCallbacks {
@@ -17,11 +17,9 @@ class CarritoComponent extends PositionComponent
   final int totalLanes = 5;
   Effect? _jumpEffect;
 
-  late SpriteComponent _visualSprite;
+  SpriteComponent? _visualSprite;
 
-  double get laneChangeDuration {
-    return 0.15 / game.gameState.speedMultiplier;
-  }
+  double get laneChangeDuration => 0.15 / game.gameState.speedMultiplier;
 
   final double jumpDuration = 0.5;
   final double jumpScale = 1.3;
@@ -30,6 +28,8 @@ class CarritoComponent extends PositionComponent
   bool _isMoving = false;
   bool _isJumping = false;
   bool _isOnObstacle = false;
+
+  double _jumpGraceTimer = 0.0;
 
   final double dragThreshold = 10.0;
   Vector2 _basePosition = Vector2.zero();
@@ -53,10 +53,9 @@ class CarritoComponent extends PositionComponent
     );
 
     _updateSize();
-
     add(RectangleHitbox());
 
-    add(_visualSprite);
+    add(_visualSprite!);
 
     _updatePosition();
     _basePosition = position.clone();
@@ -64,7 +63,6 @@ class CarritoComponent extends PositionComponent
 
   void _updateSize() {
     final gameSize = game.size;
-
     if (isLandscape) {
       final carritoHeight = gameSize.y * 0.15;
       size = Vector2(carritoHeight * 2, carritoHeight);
@@ -74,8 +72,8 @@ class CarritoComponent extends PositionComponent
     }
 
     if (_visualSprite != null) {
-      _visualSprite.size = size;
-      _visualSprite.position = size / 2;
+      _visualSprite!.size = size;
+      _visualSprite!.position = size / 2;
     }
   }
 
@@ -89,7 +87,6 @@ class CarritoComponent extends PositionComponent
 
   void _updatePosition() {
     final gameSize = game.size;
-
     if (isLandscape) {
       position.x = size.x / 2 + 50;
       position.y = _getLanePositionY(gameSize.y);
@@ -111,19 +108,24 @@ class CarritoComponent extends PositionComponent
 
   void handleDrag(Vector2 delta) {
     if (_isMoving) return;
-
     if (isLandscape) {
-      if (delta.y > dragThreshold) {
+      if (delta.y > dragThreshold)
         _changeLane(1);
-      } else if (delta.y < -dragThreshold) {
+      else if (delta.y < -dragThreshold)
         _changeLane(-1);
-      }
     } else {
-      if (delta.x > dragThreshold) {
+      if (delta.x > dragThreshold)
         _changeLane(1);
-      } else if (delta.x < -dragThreshold) {
+      else if (delta.x < -dragThreshold)
         _changeLane(-1);
-      }
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (_jumpGraceTimer > 0) {
+      _jumpGraceTimer -= dt;
     }
   }
 
@@ -131,59 +133,47 @@ class CarritoComponent extends PositionComponent
     if (_isJumping) return;
 
     _isJumping = true;
+    _jumpGraceTimer = 0.2;
 
     final startScale = _isOnObstacle ? platformScale : 1.0;
-    final wasOnObstacle = _isOnObstacle;
+    const endScale = 1.0;
+
+    if (_isOnObstacle) {
+      _isOnObstacle = false;
+    }
 
     _jumpEffect =
         FunctionEffect<CarritoComponent>((target, progress) {
+            final currentBaseScale =
+                startScale + (endScale - startScale) * progress;
             final jumpCurve = 4 * progress * (1 - progress);
-            final scaleValue =
-                startScale + (jumpScale - startScale) * jumpCurve;
+            final jumpImpulse = (jumpScale - 1.0) * jumpCurve;
 
-            _visualSprite.scale = Vector2.all(scaleValue);
+            _visualSprite?.scale = Vector2.all(currentBaseScale + jumpImpulse);
           }, EffectController(duration: jumpDuration))
           ..onComplete = () {
             _isJumping = false;
             _jumpEffect = null;
 
             if (_isOnObstacle) {
-              _visualSprite.scale = Vector2.all(platformScale);
+              _visualSprite?.scale = Vector2.all(platformScale);
             } else {
-              _visualSprite.add(
-                ScaleEffect.to(
-                  Vector2.all(1.0),
-                  EffectController(duration: 0.3, curve: Curves.easeInOut),
-                ),
-              );
+              _visualSprite?.scale = Vector2.all(1.0);
             }
           };
 
     add(_jumpEffect!);
-
-    if (wasOnObstacle) {
-      _isOnObstacle = false;
-      _platformsInContact.clear();
-    }
   }
 
   @override
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
     final isKeyDown = event is KeyDownEvent;
-
-    if (!isKeyDown) {
-      return true;
-    }
-
+    if (!isKeyDown) return true;
     if (keysPressed.contains(LogicalKeyboardKey.space)) {
       jump();
       return false;
     }
-
-    if (_isMoving) {
-      return true;
-    }
-
+    if (_isMoving) return true;
     if (isLandscape) {
       if (keysPressed.contains(LogicalKeyboardKey.arrowDown)) {
         _changeLane(1);
@@ -201,13 +191,11 @@ class CarritoComponent extends PositionComponent
         return false;
       }
     }
-
     return true;
   }
 
   void _changeLane(int direction) {
     final newLane = currentLane + direction;
-
     if (newLane >= 0 && newLane < totalLanes) {
       currentLane = newLane;
       _animateToLane();
@@ -217,21 +205,16 @@ class CarritoComponent extends PositionComponent
   void _animateToLane() {
     final gameSize = game.size;
     Vector2 targetPosition;
-
     if (isLandscape) {
       targetPosition = Vector2(position.x, _getLanePositionY(gameSize.y));
     } else {
       targetPosition = Vector2(_getLanePositionX(gameSize.x), position.y);
     }
-
     _isMoving = true;
-
     children.whereType<MoveToEffect>().forEach((effect) {
-      if (effect.controller.duration == laneChangeDuration) {
+      if (effect.controller.duration == laneChangeDuration)
         effect.removeFromParent();
-      }
     });
-
     add(
       MoveToEffect(
         targetPosition,
@@ -259,7 +242,10 @@ class CarritoComponent extends PositionComponent
 
     if (other is ObstacleComponent) {
       if (other.type == ObstacleType.jumpable) {
+        if (_jumpGraceTimer > 0) return;
+
         if (_isJumping) {
+          debugPrint("Aterrizando en plataforma");
           _platformsInContact.add(other);
           _isOnObstacle = true;
           _stopJumpEffect();
@@ -272,7 +258,6 @@ class CarritoComponent extends PositionComponent
           return;
         }
       }
-
       _handleCollision(other);
     }
   }
@@ -281,21 +266,19 @@ class CarritoComponent extends PositionComponent
   void onCollisionEnd(PositionComponent other) {
     super.onCollisionEnd(other);
 
-    if (other is ObstacleComponent) {
-      if (other.type == ObstacleType.jumpable) {
-        _platformsInContact.remove(other);
+    if (other is ObstacleComponent && other.type == ObstacleType.jumpable) {
+      _platformsInContact.remove(other);
 
-        if (_platformsInContact.isEmpty && _isOnObstacle) {
-          _isOnObstacle = false;
+      if (_platformsInContact.isEmpty && _isOnObstacle) {
+        _isOnObstacle = false;
 
-          if (!_isJumping) {
-            _visualSprite.add(
-              ScaleEffect.to(
-                Vector2.all(1.0),
-                EffectController(duration: 0.3, curve: Curves.easeInOut),
-              ),
-            );
-          }
+        if (!_isJumping) {
+          _visualSprite?.add(
+            ScaleEffect.to(
+              Vector2.all(1.0),
+              EffectController(duration: 0.3, curve: Curves.easeInOut),
+            ),
+          );
         }
       }
     }
@@ -307,20 +290,18 @@ class CarritoComponent extends PositionComponent
       _jumpEffect = null;
       _isJumping = false;
 
-      if (!_isOnObstacle) {
-        _visualSprite.scale = Vector2.all(1.0);
-      } else {
-        _visualSprite.add(
-          ScaleEffect.to(
-            Vector2.all(platformScale),
-            EffectController(duration: 0.2, curve: Curves.easeOut),
-          ),
-        );
-      }
+      children.whereType<ScaleEffect>().forEach((e) => e.removeFromParent());
+
+      _visualSprite?.add(
+        ScaleEffect.to(
+          Vector2.all(platformScale),
+          EffectController(duration: 0.1, curve: Curves.easeOut),
+        ),
+      );
     }
   }
 
   void _handleCollision(ObstacleComponent obstacle) {
-    print('¡Colisión con obstáculo ${obstacle.type}!');
+    debugPrint('¡Colisión con obstáculo ${obstacle.type}!');
   }
 }
