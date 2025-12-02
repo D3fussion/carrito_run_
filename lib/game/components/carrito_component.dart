@@ -1,4 +1,5 @@
 import 'package:carrito_run/game/components/coin_component.dart';
+import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -8,7 +9,7 @@ import 'package:flame/collisions.dart';
 import 'obstacle_component.dart';
 
 class CarritoComponent extends PositionComponent
-    with KeyboardHandler, HasGameReference, CollisionCallbacks {
+    with KeyboardHandler, HasGameReference<CarritoGame>, CollisionCallbacks {
   final bool isLandscape;
   final GameState gameState;
 
@@ -18,7 +19,10 @@ class CarritoComponent extends PositionComponent
 
   late SpriteComponent _visualSprite;
 
-  final double laneChangeDuration = 0.15;
+  double get laneChangeDuration {
+    return 0.15 / game.gameState.speedMultiplier;
+  }
+
   final double jumpDuration = 0.5;
   final double jumpScale = 1.3;
   final double platformScale = 1.15;

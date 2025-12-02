@@ -47,7 +47,6 @@ class BackgroundManager extends PositionComponent
 
   Future<void> _reloadCurrentBackground() async {
     final newParallax = await _createParallaxForTheme(_currentThemeIndex);
-
     _currentParallax = newParallax;
 
     if (_isTransitioning && _nextParallax != null) {
@@ -84,9 +83,13 @@ class BackgroundManager extends PositionComponent
         ? 'borders_landscape_$themeIndex.png'
         : 'borders_portrait_$themeIndex.png';
 
+    final velocity = isLandscape
+        ? Vector2(80, 0) // Landscape: Mueve a derecha
+        : Vector2(0, -80); // Portrait: Mueve arriba
+
     final component = await ParallaxComponent.load(
       [ParallaxImageData(roadImage), ParallaxImageData(bordersImage)],
-      baseVelocity: isLandscape ? Vector2(80, 0) : Vector2(0, -80),
+      baseVelocity: velocity,
       images: game.images,
       repeat: isLandscape ? ImageRepeat.repeatX : ImageRepeat.repeatY,
       alignment: Alignment.center,
@@ -106,8 +109,29 @@ class BackgroundManager extends PositionComponent
   void update(double dt) {
     super.update(dt);
 
-    _currentParallax?.update(dt);
-    _nextParallax?.update(dt);
+    final currentSpeed = game.gameState.currentSpeed;
+
+    double parallaxSpeed = currentSpeed * 0.4;
+
+    bool isLandscape = game.size.x > game.size.y;
+
+    if (_currentParallax != null) {
+      if (isLandscape) {
+        _currentParallax!.parallax!.baseVelocity = Vector2(parallaxSpeed, 0);
+      } else {
+        _currentParallax!.parallax!.baseVelocity = Vector2(0, -parallaxSpeed);
+      }
+      _currentParallax!.update(dt);
+    }
+
+    if (_nextParallax != null) {
+      if (isLandscape) {
+        _nextParallax!.parallax!.baseVelocity = Vector2(parallaxSpeed, 0);
+      } else {
+        _nextParallax!.parallax!.baseVelocity = Vector2(0, -parallaxSpeed);
+      }
+      _nextParallax!.update(dt);
+    }
 
     if (_isTransitioning && _gasStationDelimiter != null) {
       final station = _gasStationDelimiter!;

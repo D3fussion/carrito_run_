@@ -1,3 +1,8 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flame/events.dart';
+import 'package:flame/game.dart';
+
 import 'package:carrito_run/game/components/carrito_component.dart';
 import 'package:carrito_run/game/components/coin_component.dart';
 import 'package:carrito_run/game/components/gas_station_component.dart';
@@ -5,8 +10,6 @@ import 'package:carrito_run/game/components/obstacle_component.dart';
 import 'package:carrito_run/game/managers/background_manager.dart';
 import 'package:carrito_run/game/managers/obstacle_spawner.dart';
 import 'package:carrito_run/game/states/game_state.dart';
-import 'package:flame/events.dart';
-import 'package:flame/game.dart';
 
 class CarritoGame extends FlameGame
     with
@@ -18,16 +21,16 @@ class CarritoGame extends FlameGame
 
   late BackgroundManager _backgroundManager;
   CarritoComponent? _carrito;
-  bool _isLandscape = false;
   ObstacleSpawner? _obstacleSpawner;
+
+  bool _isLandscape = false;
   bool _isPlaying = false;
+  bool _waitingForGasStation = false;
+  bool _imagesPreloaded = false;
+  int _currentTheme = 0;
 
   bool _hasDragged = false;
   Vector2? _panStartPosition;
-
-  int _currentTheme = 0;
-  bool _waitingForGasStation = false;
-  bool _imagesPreloaded = false;
 
   CarritoGame({required this.gameState});
 
@@ -45,27 +48,13 @@ class CarritoGame extends FlameGame
     pauseEngine();
   }
 
-  Future<void> _preloadImages() async {
-    if (_imagesPreloaded) return;
+  void startGame() {
+    _isPlaying = true;
+    gameState.setPlaying(true);
 
-    await images.loadAll([
-      'gas_station_landscape.png',
-      'gas_station_portrait.png',
-      'carrito_landscape.png',
-      'carrito_portrait.png',
-      'coin.png',
-      'obstacle_jumpable.png',
-      'obstacle_nonjumpable.png',
-    ]);
+    _updateCarrito();
 
-    for (int i = 0; i < 5; i++) {
-      await images.load('road_landscape_$i.png');
-      await images.load('road_portrait_$i.png');
-      await images.load('borders_landscape_$i.png');
-      await images.load('borders_portrait_$i.png');
-    }
-
-    _imagesPreloaded = true;
+    resumeEngine();
   }
 
   void resetGame() {
@@ -87,6 +76,33 @@ class CarritoGame extends FlameGame
     pauseEngine();
   }
 
+  Future<void> _preloadImages() async {
+    if (_imagesPreloaded) return;
+
+    await images.loadAll([
+      'gas_station_landscape.png',
+      'gas_station_portrait.png',
+      'carrito_landscape.png',
+      'carrito_portrait.png',
+      'coin.png',
+      'obstacle_jumpable.png',
+      'obstacle_nonjumpable.png',
+    ]);
+
+    for (int i = 0; i < 5; i++) {
+      try {
+        await images.load('road_landscape_$i.png');
+        await images.load('road_portrait_$i.png');
+        await images.load('borders_landscape_$i.png');
+        await images.load('borders_portrait_$i.png');
+      } catch (e) {
+        debugPrint("Advertencia: Faltan imágenes para el tema $i");
+      }
+    }
+
+    _imagesPreloaded = true;
+  }
+
   int _getThemeForSection(int section) {
     return (section - 1) % 5;
   }
@@ -94,31 +110,43 @@ class CarritoGame extends FlameGame
   @override
   void update(double dt) {
     super.update(dt);
+
+    if (!_isPlaying) return;
+
     gameState.updateTime(dt);
 
     if (gameState.shouldSpawnGasStation() && !_waitingForGasStation) {
       _waitingForGasStation = true;
+
       _obstacleSpawner?.setPaused(true);
+
       gameState.markGasStationSpawned();
+
       _spawnGasStation();
     }
   }
 
   void _spawnGasStation() {
-    final nextThemeIndex = _getThemeForSection(gameState.currentSection);
+    final nextThemeIndex = _getThemeForSection(gameState.currentSection + 1);
 
     final gasStation = GasStationComponent(
       isLandscape: _isLandscape,
-      gameSpeed: 200.0,
       gameState: gameState,
       onReached: () {
         pauseEngine();
         overlays.remove('PauseButton');
         overlays.add('RefuelOverlay');
       },
+      onPassCenter: () {
+        gameState.advanceToNextLevel();
+
+        _currentTheme = nextThemeIndex;
+        _obstacleSpawner?.setTheme(_currentTheme);
+      },
     );
 
     add(gasStation);
+
     _backgroundManager.startTransition(nextThemeIndex, gasStation);
   }
 
@@ -138,47 +166,6 @@ class CarritoGame extends FlameGame
       if (_isPlaying) {
         _updateCarrito();
       }
-    }
-  }
-
-  void startGame() {
-    _isPlaying = true;
-    gameState.setPlaying(true);
-
-    _updateCarrito();
-    resumeEngine();
-  }
-
-  @override
-  void onPanStart(DragStartInfo info) {
-    _hasDragged = false;
-    _panStartPosition = info.eventPosition.global;
-  }
-
-  @override
-  void onPanUpdate(DragUpdateInfo info) {
-    _hasDragged = true;
-    if (_carrito != null) {
-      _carrito!.handleDrag(info.delta.global);
-    }
-  }
-
-  @override
-  void onPanEnd(DragEndInfo info) {
-    _hasDragged = false;
-    _panStartPosition = null;
-  }
-
-  @override
-  void onPanCancel() {
-    _hasDragged = false;
-    _panStartPosition = null;
-  }
-
-  @override
-  void onTapUp(TapUpEvent event) {
-    if (!_hasDragged && _carrito != null) {
-      _carrito!.jump();
     }
   }
 
@@ -210,9 +197,64 @@ class CarritoGame extends FlameGame
 
     _obstacleSpawner = ObstacleSpawner(
       isLandscape: _isLandscape,
-      gameSpeed: 200.0,
+      minSpawnInterval: 0.2,
+      maxSpawnInterval: 0.5,
     );
     _obstacleSpawner!.setTheme(_currentTheme);
     add(_obstacleSpawner!);
+  }
+
+  @override
+  void onPanStart(DragStartInfo info) {
+    if (!_isPlaying) return;
+    _hasDragged = false;
+    _panStartPosition = info.eventPosition.global;
+  }
+
+  @override
+  void onPanUpdate(DragUpdateInfo info) {
+    if (!_isPlaying) return;
+    _hasDragged = true;
+    if (_carrito != null) {
+      _carrito!.handleDrag(info.delta.global);
+    }
+  }
+
+  @override
+  void onPanEnd(DragEndInfo info) {
+    _hasDragged = false;
+    _panStartPosition = null;
+  }
+
+  @override
+  void onPanCancel() {
+    _hasDragged = false;
+    _panStartPosition = null;
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    if (!_isPlaying) return;
+    if (!_hasDragged && _carrito != null) {
+      _carrito!.jump();
+    }
+  }
+
+  @override
+  KeyEventResult onKeyEvent(
+    KeyEvent event,
+    Set<LogicalKeyboardKey> keysPressed,
+  ) {
+    final isKeyDown = event is KeyDownEvent;
+
+    if (isKeyDown && keysPressed.contains(LogicalKeyboardKey.keyP)) {
+      if (_isPlaying) {
+        debugPrint("DEV CHEAT: Saltando nivel...");
+        gameState.advanceToNextLevel();
+        return KeyEventResult.handled;
+      }
+    }
+
+    return super.onKeyEvent(event, keysPressed);
   }
 }

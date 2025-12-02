@@ -1,3 +1,4 @@
+import 'package:carrito_run/game/game.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
@@ -7,7 +8,7 @@ enum ObstacleType {
 }
 
 class ObstacleComponent extends SpriteComponent
-    with CollisionCallbacks, HasGameReference {
+    with CollisionCallbacks, HasGameReference<CarritoGame> {
   final bool isLandscape;
   final int lane;
   final ObstacleType type;
@@ -79,14 +80,16 @@ class ObstacleComponent extends SpriteComponent
   void update(double dt) {
     super.update(dt);
 
+    final currentSpeed = game.gameState.currentSpeed;
+
     if (isLandscape) {
-      position.x -= gameSpeed * dt;
+      position.x -= currentSpeed * dt;
 
       if (position.x < -size.x) {
         removeFromParent();
       }
     } else {
-      position.y += gameSpeed * dt;
+      position.y += currentSpeed * dt;
 
       if (position.y > game.size.y + size.y) {
         removeFromParent();

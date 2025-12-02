@@ -30,6 +30,17 @@ class GameState extends ChangeNotifier {
   final int _baseCost = 10;
   final double _costMultiplier = 1.5;
 
+  // Velocidad del juego
+  final double _baseSpeed = 400.0; // Velocidad inicial (Sección 1)
+  final double _maxSpeed = 1200.0; // Velocidad máxima (Sección 11 en adelante)
+  final int _maxSpeedSection = 11; // Nivel donde se alcanza el máximo
+
+  double get currentSpeed {
+    if (_currentSection >= _maxSpeedSection) return _maxSpeed;
+    double progress = (_currentSection - 1) / (_maxSpeedSection - 1);
+    return _baseSpeed + ((_maxSpeed - _baseSpeed) * progress);
+  }
+
   int get coins => _coins;
   int get score => _displayScore; // El jugador ve este puntaje
   int get internalScore => _internalScore; // Puntaje secreto
@@ -41,15 +52,19 @@ class GameState extends ChangeNotifier {
   bool get isOutOfFuel => _fuel <= 0;
   int get nextGasStationScore => _nextGasStationScore;
   int get scoreUntilNextGasStation => _nextGasStationScore - _internalScore;
+  double get speedMultiplier => currentSpeed / _baseSpeed;
 
   bool shouldSpawnGasStation() {
     return _internalScore >= _nextGasStationScore;
   }
 
   void markGasStationSpawned() {
-    _currentSection++;
     _nextGasStationScore =
-        _firstGasStation + (_currentSection - 1) * _gasStationInterval;
+        _firstGasStation + (_currentSection) * _gasStationInterval;
+  }
+
+  void advanceToNextLevel() {
+    _currentSection++;
 
     _refuelCost = (_baseCost * (_costMultiplier * (_currentSection - 1)))
         .toInt();

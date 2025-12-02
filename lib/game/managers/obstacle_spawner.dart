@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:carrito_run/game/components/coin_component.dart';
+import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/components/obstacle_component.dart';
 import 'package:flame/components.dart';
 
@@ -39,9 +40,8 @@ class CoinSpawnInfo {
   });
 }
 
-class ObstacleSpawner extends Component with HasGameReference {
+class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
   final bool isLandscape;
-  final double gameSpeed;
 
   final double minSpawnGap;
   final double maxSpawnGap;
@@ -62,9 +62,8 @@ class ObstacleSpawner extends Component with HasGameReference {
 
   ObstacleSpawner({
     required this.isLandscape,
-    this.gameSpeed = 200.0,
-    double minSpawnInterval = 0.5,
-    double maxSpawnInterval = 1.5,
+    double minSpawnInterval = 0.2,
+    double maxSpawnInterval = 0.5,
   }) : minSpawnGap = minSpawnInterval,
        maxSpawnGap = maxSpawnInterval;
 
@@ -89,7 +88,7 @@ class ObstacleSpawner extends Component with HasGameReference {
 
   void _initializePatterns() {
     final basePatterns = [
-      // Patrón 1 (Duración 1.5)
+      // 1. Salto Central (Bordes vacíos)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
@@ -109,7 +108,8 @@ class ObstacleSpawner extends Component with HasGameReference {
         ],
         duration: 1.5,
       ),
-      // Patrón 2 (Duración 2.0)
+
+      // 2. Zigzag Central (Bordes vacíos)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
@@ -131,76 +131,65 @@ class ObstacleSpawner extends Component with HasGameReference {
         coins: [
           CoinSpawnInfo(lane: 2, delayFromStart: 0.0),
           CoinSpawnInfo(lane: 2, delayFromStart: 0.6),
-          CoinSpawnInfo(lane: 3, delayFromStart: 1.2),
+          CoinSpawnInfo(lane: 2, delayFromStart: 1.2),
         ],
         duration: 2.0,
       ),
-      // Patrón 3 (Duración 1.5)
+
+      // 3. La Torre Central (Bordes vacíos)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
-            lane: 0,
+            lane: 2,
             type: ObstacleType.nonJumpable,
             delayFromStart: 0.0,
           ),
           ObstacleSpawnInfo(
             lane: 1,
-            type: ObstacleType.nonJumpable,
-            delayFromStart: 0.0,
-          ),
-          ObstacleSpawnInfo(
-            lane: 3,
-            type: ObstacleType.nonJumpable,
-            delayFromStart: 0.0,
-          ),
-          ObstacleSpawnInfo(
-            lane: 4,
-            type: ObstacleType.nonJumpable,
-            delayFromStart: 0.0,
-          ),
-        ],
-        coins: [CoinSpawnInfo(lane: 2, delayFromStart: 0.0)],
-        duration: 1.5,
-      ),
-      // Patrón 4 (Duración 2.0)
-      ObstaclePattern(
-        obstacles: [
-          ObstacleSpawnInfo(
-            lane: 0,
             type: ObstacleType.jumpable,
             delayFromStart: 0.0,
           ),
           ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.0, isOnObstacle: true),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.0, isOnObstacle: true),
+        ],
+        duration: 1.5,
+      ),
+
+      // 4. Escalera Central (Bordes vacíos)
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
             lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
             type: ObstacleType.jumpable,
             delayFromStart: 0.3,
           ),
           ObstacleSpawnInfo(
-            lane: 2,
+            lane: 3,
             type: ObstacleType.jumpable,
             delayFromStart: 0.6,
           ),
-          ObstacleSpawnInfo(
-            lane: 3,
-            type: ObstacleType.jumpable,
-            delayFromStart: 0.9,
-          ),
-          ObstacleSpawnInfo(
-            lane: 4,
-            type: ObstacleType.jumpable,
-            delayFromStart: 1.2,
-          ),
         ],
         coins: [
-          CoinSpawnInfo(lane: 0, delayFromStart: 0.0, isOnObstacle: true),
-          CoinSpawnInfo(lane: 1, delayFromStart: 0.3, isOnObstacle: true),
-          CoinSpawnInfo(lane: 2, delayFromStart: 0.6, isOnObstacle: true),
-          CoinSpawnInfo(lane: 3, delayFromStart: 0.9, isOnObstacle: true),
-          CoinSpawnInfo(lane: 4, delayFromStart: 1.2, isOnObstacle: true),
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.0, isOnObstacle: true),
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.3, isOnObstacle: true),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.6, isOnObstacle: true),
         ],
         duration: 2.0,
       ),
-      // Patrón 5 (Duración 2.5)
+
+      // 5. Trampa Central Modificada (Bordes vacíos)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
@@ -209,32 +198,70 @@ class ObstacleSpawner extends Component with HasGameReference {
             delayFromStart: 0.0,
           ),
           ObstacleSpawnInfo(
-            lane: 0,
-            type: ObstacleType.nonJumpable,
-            delayFromStart: 1.0,
-          ),
-          ObstacleSpawnInfo(
             lane: 1,
             type: ObstacleType.nonJumpable,
             delayFromStart: 1.0,
           ),
           ObstacleSpawnInfo(
-            lane: 2,
+            lane: 3,
             type: ObstacleType.nonJumpable,
             delayFromStart: 1.0,
           ),
         ],
         coins: [
           CoinSpawnInfo(lane: 2, delayFromStart: 0.0, isOnObstacle: true),
-          CoinSpawnInfo(lane: 3, delayFromStart: 1.0),
+          CoinSpawnInfo(lane: 2, delayFromStart: 1.0),
         ],
         duration: 2.5,
       ),
-      // Patrón 6 (Duración 1.5)
+
+      // 6. La V (Bordes vacíos)
       ObstaclePattern(
         obstacles: [
           ObstacleSpawnInfo(
-            lane: 0,
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.3),
+        ],
+        duration: 1.5,
+      ),
+
+      // 7. El Embudo Suave
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.3),
+        ],
+        duration: 2.0,
+      ),
+
+      // 8. Muro Saltable Central
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
             type: ObstacleType.jumpable,
             delayFromStart: 0.0,
           ),
@@ -244,16 +271,87 @@ class ObstacleSpawner extends Component with HasGameReference {
             delayFromStart: 0.0,
           ),
           ObstacleSpawnInfo(
-            lane: 4,
+            lane: 3,
             type: ObstacleType.jumpable,
             delayFromStart: 0.0,
           ),
         ],
         coins: [
-          CoinSpawnInfo(lane: 1, delayFromStart: 0.0),
-          CoinSpawnInfo(lane: 3, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.0, isOnObstacle: true),
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0, isOnObstacle: true),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.0, isOnObstacle: true),
         ],
         duration: 1.5,
+      ),
+
+      // 9. Bloqueo Central Saltable
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0, isOnObstacle: true),
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.8, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+
+      // 10. Lluvia Central
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.4,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.8,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 1.2,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 1.6,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.0, isOnObstacle: true),
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.4, isOnObstacle: true),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.8, isOnObstacle: true),
+          CoinSpawnInfo(lane: 2, delayFromStart: 1.2, isOnObstacle: true),
+          CoinSpawnInfo(lane: 1, delayFromStart: 1.6, isOnObstacle: true),
+        ],
+        duration: 2.5,
       ),
     ];
 
@@ -267,10 +365,16 @@ class ObstacleSpawner extends Component with HasGameReference {
   }
 
   void _scheduleNextPattern() {
-    final randomGap =
+    final baseGap =
         minSpawnGap + _random.nextDouble() * (maxSpawnGap - minSpawnGap);
 
-    _nextSpawnTime = _lastPatternDuration + randomGap;
+    final multiplier = game.gameState.speedMultiplier;
+
+    final adjustedGap = baseGap / multiplier;
+
+    final adjustedDuration = _lastPatternDuration / multiplier;
+
+    _nextSpawnTime = adjustedDuration + adjustedGap;
   }
 
   @override
@@ -279,10 +383,14 @@ class ObstacleSpawner extends Component with HasGameReference {
 
     if (_isPaused) return;
 
+    final multiplier = game.gameState.speedMultiplier;
+
     _timeSinceLastSpawn += dt;
 
+    double adjustedDt = dt * multiplier;
+
     _pendingObstacles.removeWhere((pending) {
-      pending.timeUntilSpawn -= dt;
+      pending.timeUntilSpawn -= adjustedDt;
       if (pending.timeUntilSpawn <= 0) {
         _spawnObstacle(pending.lane, pending.type);
         return true;
@@ -291,7 +399,7 @@ class ObstacleSpawner extends Component with HasGameReference {
     });
 
     _pendingCoins.removeWhere((pending) {
-      pending.timeUntilSpawn -= dt;
+      pending.timeUntilSpawn -= adjustedDt;
       if (pending.timeUntilSpawn <= 0) {
         _spawnCoin(pending.lane, pending.isOnObstacle);
         return true;
@@ -346,7 +454,6 @@ class ObstacleSpawner extends Component with HasGameReference {
       isLandscape: isLandscape,
       lane: lane,
       type: type,
-      gameSpeed: gameSpeed,
     );
     game.add(obstacle);
   }
@@ -355,7 +462,6 @@ class ObstacleSpawner extends Component with HasGameReference {
     final coin = CoinComponent(
       isLandscape: isLandscape,
       lane: lane,
-      gameSpeed: gameSpeed,
       isOnObstacle: isOnObstacle,
     );
     game.add(coin);

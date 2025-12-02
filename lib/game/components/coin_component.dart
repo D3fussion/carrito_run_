@@ -1,17 +1,16 @@
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:carrito_run/game/game.dart';
 
 class CoinComponent extends SpriteComponent
-    with CollisionCallbacks, HasGameReference {
+    with CollisionCallbacks, HasGameReference<CarritoGame> {
   final bool isLandscape;
   final int lane;
-  final double gameSpeed;
   final bool isOnObstacle;
 
   CoinComponent({
     required this.isLandscape,
     required this.lane,
-    this.gameSpeed = 200.0,
     this.isOnObstacle = false,
   });
 
@@ -20,7 +19,6 @@ class CoinComponent extends SpriteComponent
     await super.onLoad();
 
     sprite = await game.loadSprite('coin.png');
-
     priority = isOnObstacle ? 8 : 5;
 
     _updateSize();
@@ -70,14 +68,17 @@ class CoinComponent extends SpriteComponent
   void update(double dt) {
     super.update(dt);
 
+    final currentSpeed = game.gameState.currentSpeed;
+    print("Velocidad actual: $currentSpeed");
+
     if (isLandscape) {
-      position.x -= gameSpeed * dt;
+      position.x -= currentSpeed * dt;
 
       if (position.x < -size.x) {
         removeFromParent();
       }
     } else {
-      position.y += gameSpeed * dt;
+      position.y += currentSpeed * dt;
 
       if (position.y > game.size.y + size.y) {
         removeFromParent();
