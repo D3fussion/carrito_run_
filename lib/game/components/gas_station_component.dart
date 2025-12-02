@@ -47,12 +47,14 @@ class GasStationComponent extends SpriteComponent
 
   void _updatePosition() {
     final gameSize = game.size;
+    const double safetyBuffer = 400.0;
+
     if (isLandscape) {
-      position.x = gameSize.x + size.x / 2;
+      position.x = gameSize.x + (size.x / 2) + safetyBuffer;
       position.y = gameSize.y / 2;
     } else {
       position.x = gameSize.x / 2;
-      position.y = -size.y / 2;
+      position.y = -(size.y / 2) - safetyBuffer;
     }
   }
 
