@@ -1,4 +1,5 @@
 import 'package:carrito_run/game/components/coin_component.dart';
+import 'package:carrito_run/game/components/fuel_canister_component.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -238,6 +239,21 @@ class CarritoComponent extends PositionComponent
     if (other is CoinComponent) {
       gameState.addCoin();
       other.removeFromParent();
+      return;
+    }
+
+    if (other is FuelCanisterComponent) {
+      debugPrint("¡Gasolina extra recogida!");
+      gameState.collectFuelCanister();
+      other.removeFromParent();
+
+      _visualSprite?.add(
+        ColorEffect(
+          Colors.green,
+          EffectController(duration: 0.2, alternate: true, repeatCount: 2),
+          opacityTo: 0.7,
+        ),
+      );
       return;
     }
 

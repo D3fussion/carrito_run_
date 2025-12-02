@@ -33,6 +33,9 @@ class GameState extends ChangeNotifier {
   final int _baseCost = 10;
   final double _costMultiplier = 1.5;
 
+  // Valor de recuperación del bidón pequeño
+  final double _smallFuelRecovery = 15.0;
+
   // Velocidad del juego
   final double _baseSpeed = 400.0; // Velocidad inicial (Sección 1)
   final double _maxSpeed = 1000.0; // Velocidad máxima (Sección 11 en adelante)
@@ -148,5 +151,13 @@ class GameState extends ChangeNotifier {
   void setPlaying(bool playing) {
     _isPlaying = playing;
     _safeNotifyListeners();
+  }
+
+  void collectFuelCanister() {
+    if (_fuel < _maxFuel) {
+      _fuel += _smallFuelRecovery;
+      if (_fuel > _maxFuel) _fuel = _maxFuel;
+      _safeNotifyListeners();
+    }
   }
 }

@@ -1,3 +1,4 @@
+import 'package:carrito_run/game/components/fuel_canister_component.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame/events.dart';
@@ -87,6 +88,7 @@ class CarritoGame extends FlameGame
       'coin.png',
       'obstacle_jumpable.png',
       'obstacle_nonjumpable.png',
+      'fuel_canister.png',
     ]);
 
     for (int i = 0; i < 5; i++) {
@@ -184,6 +186,9 @@ class CarritoGame extends FlameGame
       (c) => c.removeFromParent(),
     );
     children.whereType<GasStationComponent>().toList().forEach(
+      (c) => c.removeFromParent(),
+    );
+    children.whereType<FuelCanisterComponent>().toList().forEach(
       (c) => c.removeFromParent(),
     );
 

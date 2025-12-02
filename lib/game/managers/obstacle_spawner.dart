@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:carrito_run/game/components/coin_component.dart';
+import 'package:carrito_run/game/components/fuel_canister_component.dart';
 import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/components/obstacle_component.dart';
 import 'package:flame/components.dart';
@@ -459,12 +460,23 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
   }
 
   void _spawnCoin(int lane, bool isOnObstacle) {
-    final coin = CoinComponent(
-      isLandscape: isLandscape,
-      lane: lane,
-      isOnObstacle: isOnObstacle,
-    );
-    game.add(coin);
+    const double fuelChance = 0.03;
+
+    if (_random.nextDouble() < fuelChance) {
+      final canister = FuelCanisterComponent(
+        isLandscape: isLandscape,
+        lane: lane,
+        isOnObstacle: isOnObstacle,
+      );
+      game.add(canister);
+    } else {
+      final coin = CoinComponent(
+        isLandscape: isLandscape,
+        lane: lane,
+        isOnObstacle: isOnObstacle,
+      );
+      game.add(coin);
+    }
   }
 }
 
