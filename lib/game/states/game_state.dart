@@ -3,36 +3,57 @@ import 'package:flutter/scheduler.dart';
 
 class GameState extends ChangeNotifier {
   int _coins = 0;
-  int _displayScore = 0; // Puntaje que ve el jugador
-  int _internalScore = 0; // Puntaje secreto para gasolineras/powerups
+  int _displayScore = 0;
+  int _internalScore = 0;
   double _timeElapsed = 0.0;
-  final double _displayScoreMultiplier =
-      10.0; // Multiplicador del puntaje visible
+  final double _displayScoreMultiplier = 10.0;
 
-  // Saber si esta jugando o no
+  // ============ SISTEMA DE VIDAS ============
+  int _lives = 3;
+  final int _maxLives = 3;
+  bool _isInvulnerable = false;
+  double _invulnerabilityTimer = 0.0;
+  final double _invulnerabilityDuration = 2.0;
+  
+  int get lives => _lives;
+  int get maxLives => _maxLives;
+  bool get isInvulnerable => _isInvulnerable;
+  bool get isGameOver => _lives <= 0;
+  // =========================================
+
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
 
-  // Sistema de gasolina
+  // ============ SISTEMA DE GASOLINA BALANCEADO ============
   double _fuel = 100.0;
   final double _maxFuel = 100.0;
-  final double _fuelConsumptionRate = 5.0;
+  
+  // ⭐ BALANCEADO: Consumo reducido de 5.0 a 2.5 (dura el doble)
+  double _fuelConsumptionRate = 2.5; // Era 5.0, ahora más lento
+  final double _baseFuelConsumptionRate = 2.5;
+  
+  // Multiplicador de consumo de gasolina (para terrenos especiales)
+  double _fuelMultiplier = 1.0;
+  
+  double get fuelConsumptionRate => _fuelConsumptionRate;
+  double get fuelMultiplier => _fuelMultiplier;
+  // ======================================================
 
-  // Sistema de secciones basado en puntaje interno
+  // Sistema de secciones
   int _currentSection = 1;
-  int _nextGasStationScore = 50; // Primera gasolinera a los 50 puntos
+  int _nextGasStationScore = 50;
   final int _firstGasStation = 50;
-  final int _gasStationInterval =
-      60; // Cada 60 puntos adicionales después de la primera
+  final int _gasStationInterval = 60;
 
   // Costo de gasolina
   int _refuelCost = 10;
   final int _baseCost = 10;
   final double _costMultiplier = 1.5;
 
+  // Getters existentes
   int get coins => _coins;
-  int get score => _displayScore; // El jugador ve este puntaje
-  int get internalScore => _internalScore; // Puntaje secreto
+  int get score => _displayScore;
+  int get internalScore => _internalScore;
   double get timeElapsed => _timeElapsed;
   double get fuel => _fuel;
   double get maxFuel => _maxFuel;
@@ -68,16 +89,92 @@ class GameState extends ChangeNotifier {
     _safeNotifyListeners();
   }
 
+  // ============ MÉTODOS PARA VIDAS ============
+  
+  void loseLife() {
+    if (_isInvulnerable || _lives <= 0) return;
+    
+    _lives--;
+    _activateInvulnerability();
+    
+    print('❤️ Vida perdida! Vidas restantes: $_lives');
+    
+    if (_lives <= 0) {
+      _handleGameOver();
+    }
+    
+    _safeNotifyListeners();
+  }
+  
+  void _activateInvulnerability() {
+    _isInvulnerable = true;
+    _invulnerabilityTimer = _invulnerabilityDuration;
+  }
+  
+  void _handleGameOver() {
+    print('💀 GAME OVER - Sin vidas');
+  }
+  
+  // ⭐ NUEVO: Ganar vida (power-up)
+  void gainLife() {
+    if (_lives < _maxLives) {
+      _lives++;
+      print('💚 ¡Vida extra! Vidas: $_lives');
+      _safeNotifyListeners();
+    }
+  }
+  
+  void resetLives() {
+    _lives = _maxLives;
+    _isInvulnerable = false;
+    _invulnerabilityTimer = 0.0;
+    _safeNotifyListeners();
+  }
+  
+  // ============ MÉTODOS PARA GASOLINA ============
+  
+  /// ⭐ NUEVO: Recargar gasolina parcialmente (power-up)
+  void addFuel(double amount) {
+    _fuel += amount;
+    if (_fuel > _maxFuel) _fuel = _maxFuel;
+    print('⛽ Gasolina recargada: +$amount (Total: ${_fuel.toStringAsFixed(1)})');
+    _safeNotifyListeners();
+  }
+  
+  /// Establece el multiplicador de consumo de gasolina (terrenos especiales)
+  void setFuelMultiplier(double multiplier) {
+    _fuelMultiplier = multiplier;
+    _fuelConsumptionRate = _baseFuelConsumptionRate * _fuelMultiplier;
+    _safeNotifyListeners();
+  }
+  
+  /// Resetea el multiplicador de gasolina a normal
+  void resetFuelMultiplier() {
+    _fuelMultiplier = 1.0;
+    _fuelConsumptionRate = _baseFuelConsumptionRate;
+    _safeNotifyListeners();
+  }
+  
+  // ============================================
+
   void updateTime(double dt) {
     _timeElapsed += dt;
-
     _internalScore = _timeElapsed.floor();
-
     _displayScore = (_timeElapsed * _displayScoreMultiplier).toInt();
 
+    // Consumo de gasolina
     if (_fuel > 0) {
       _fuel -= _fuelConsumptionRate * dt;
       if (_fuel < 0) _fuel = 0;
+    }
+    
+    // Actualizar invulnerabilidad
+    if (_isInvulnerable) {
+      _invulnerabilityTimer -= dt;
+      if (_invulnerabilityTimer <= 0) {
+        _isInvulnerable = false;
+        _invulnerabilityTimer = 0.0;
+      }
     }
 
     _safeNotifyListeners();
@@ -105,6 +202,16 @@ class GameState extends ChangeNotifier {
     _currentSection = 1;
     _nextGasStationScore = _firstGasStation;
     _refuelCost = _baseCost;
+    
+    // Reset vidas
+    _lives = _maxLives;
+    _isInvulnerable = false;
+    _invulnerabilityTimer = 0.0;
+    
+    // Reset gasolina
+    _fuelMultiplier = 1.0;
+    _fuelConsumptionRate = _baseFuelConsumptionRate;
+    
     _safeNotifyListeners();
   }
 

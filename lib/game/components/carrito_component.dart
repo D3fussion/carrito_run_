@@ -1,4 +1,5 @@
 import 'package:carrito_run/game/components/coin_component.dart';
+import 'package:carrito_run/game/components/powerup_component.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -32,6 +33,11 @@ class CarritoComponent extends PositionComponent
 
   final Set<ObstacleComponent> _platformsInContact = {};
 
+  // ============ SISTEMA DE INVULNERABILIDAD VISUAL ============
+  double _blinkTimer = 0.0;
+  final double _blinkInterval = 0.15; // Parpadeo cada 0.15 segundos
+  bool _isVisible = true;
+
   CarritoComponent({required this.isLandscape, required this.gameState});
 
   @override
@@ -41,6 +47,14 @@ class CarritoComponent extends PositionComponent
     priority = 10;
     anchor = Anchor.center;
 
+    // 🖼️ IMAGEN REQUERIDA: assets/cars/car_0_landscape.png
+    // 🖼️ IMAGEN REQUERIDA: assets/cars/car_0_portrait.png
+    // Relación 2:1 según especificaciones
+    // Landscape: 128x64 px (o 256x128, 512x256)
+    // Portrait: 64x128 px (o 128x256, 256x512)
+    
+    // Por ahora carga desde la ubicación temporal
+    // Después cambiar a: 'cars/car_0_landscape.png'
     _visualSprite = SpriteComponent(
       sprite: await game.loadSprite(
         isLandscape ? 'carrito_landscape.png' : 'carrito_portrait.png',
@@ -51,7 +65,6 @@ class CarritoComponent extends PositionComponent
     _updateSize();
 
     add(RectangleHitbox());
-
     add(_visualSprite);
 
     _updatePosition();
@@ -81,6 +94,27 @@ class CarritoComponent extends PositionComponent
     _updateSize();
     _updatePosition();
     _basePosition = position.clone();
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    // ⭐ Efecto de parpadeo durante invulnerabilidad
+    if (gameState.isInvulnerable) {
+      _blinkTimer += dt;
+      if (_blinkTimer >= _blinkInterval) {
+        _blinkTimer = 0.0;
+        _isVisible = !_isVisible;
+        _visualSprite.opacity = _isVisible ? 1.0 : 0.3;
+      }
+    } else {
+      // Asegurar que el sprite sea visible cuando no hay invulnerabilidad
+      if (_visualSprite.opacity != 1.0) {
+        _visualSprite.opacity = 1.0;
+        _isVisible = true;
+      }
+    }
   }
 
   void _updatePosition() {
@@ -131,29 +165,28 @@ class CarritoComponent extends PositionComponent
     final startScale = _isOnObstacle ? platformScale : 1.0;
     final wasOnObstacle = _isOnObstacle;
 
-    _jumpEffect =
-        FunctionEffect<CarritoComponent>((target, progress) {
-            final jumpCurve = 4 * progress * (1 - progress);
-            final scaleValue =
-                startScale + (jumpScale - startScale) * jumpCurve;
+    _jumpEffect = FunctionEffect<CarritoComponent>(
+      (target, progress) {
+        final jumpCurve = 4 * progress * (1 - progress);
+        final scaleValue = startScale + (jumpScale - startScale) * jumpCurve;
+        _visualSprite.scale = Vector2.all(scaleValue);
+      },
+      EffectController(duration: jumpDuration),
+    )..onComplete = () {
+        _isJumping = false;
+        _jumpEffect = null;
 
-            _visualSprite.scale = Vector2.all(scaleValue);
-          }, EffectController(duration: jumpDuration))
-          ..onComplete = () {
-            _isJumping = false;
-            _jumpEffect = null;
-
-            if (_isOnObstacle) {
-              _visualSprite.scale = Vector2.all(platformScale);
-            } else {
-              _visualSprite.add(
-                ScaleEffect.to(
-                  Vector2.all(1.0),
-                  EffectController(duration: 0.3, curve: Curves.easeInOut),
-                ),
-              );
-            }
-          };
+        if (_isOnObstacle) {
+          _visualSprite.scale = Vector2.all(platformScale);
+        } else {
+          _visualSprite.add(
+            ScaleEffect.to(
+              Vector2.all(1.0),
+              EffectController(duration: 0.3, curve: Curves.easeInOut),
+            ),
+          );
+        }
+      };
 
     add(_jumpEffect!);
 
@@ -247,9 +280,21 @@ class CarritoComponent extends PositionComponent
   ) {
     super.onCollisionStart(intersectionPoints, other);
 
+    // ⭐ Colisión con moneda
     if (other is CoinComponent) {
       gameState.addCoin();
       other.removeFromParent();
+      // 🔊 SONIDO: Aquí agregar efecto de sonido al recolectar moneda
+      print('🪙 Moneda recolectada!');
+      return;
+    }
+
+    // ⭐ NUEVO: Colisión con power-up
+    if (other is PowerUpComponent) {
+      other.applyEffect(); // Aplica el efecto (vida o gasolina)
+      other.removeFromParent();
+      // 🔊 SONIDO: Aquí agregar efecto de sonido de power-up
+      print('✨ Power-up recolectado: ${other.type}');
       return;
     }
 
@@ -316,7 +361,55 @@ class CarritoComponent extends PositionComponent
     }
   }
 
+  // ============ MANEJO DE COLISIONES CON PÉRDIDA DE VIDA ============
   void _handleCollision(ObstacleComponent obstacle) {
-    print('¡Colisión con obstáculo ${obstacle.type}!');
+    // ⭐ No hacer nada si está invulnerable
+    if (gameState.isInvulnerable) {
+      print('🛡️ Invulnerable - Colisión ignorada');
+      return;
+    }
+
+    print('💥 ¡Colisión con obstáculo ${obstacle.type}!');
+    
+    // ⭐ Perder una vida
+    gameState.loseLife();
+    
+    // 🔊 SONIDO: Aquí agregar efecto de sonido de daño/colisión
+    
+    // ⭐ Efecto visual de sacudida
+    _addShakeEffect();
+    
+    // Si se acabaron las vidas, el Game Over se maneja automáticamente en game.dart
+  }
+
+  // ⭐ Efecto visual de sacudida al recibir daño
+  void _addShakeEffect() {
+    final originalPosition = position.clone();
+    const shakeAmount = 5.0;
+    const shakeCount = 3;
+    const shakeDuration = 0.05;
+
+    var shakes = 0;
+    
+    void shake() {
+      if (shakes >= shakeCount * 2) {
+        position = originalPosition;
+        return;
+      }
+
+      final offset = shakes % 2 == 0
+          ? Vector2(shakeAmount, 0)
+          : Vector2(-shakeAmount, 0);
+
+      position = originalPosition + offset;
+      shakes++;
+
+      Future.delayed(
+        Duration(milliseconds: (shakeDuration * 1000).toInt()),
+        shake,
+      );
+    }
+
+    shake();
   }
 }

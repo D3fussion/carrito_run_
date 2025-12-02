@@ -29,7 +29,44 @@ class CarritoGame extends FlameGame
   bool _waitingForGasStation = false;
   bool _imagesPreloaded = false;
 
-  CarritoGame({required this.gameState});
+  CarritoGame({required this.gameState}) {
+    // Escuchar cambios en el estado del juego
+    gameState.addListener(_onGameStateChanged);
+  }
+
+  // ============ LISTENER DE GAME STATE ============
+  void _onGameStateChanged() {
+    // Verificar si el jugador se quedó sin vidas
+    if (gameState.isGameOver && _isPlaying) {
+      _handleGameOver();
+    }
+    
+    // Verificar si se quedó sin gasolina
+    if (gameState.isOutOfFuel && _isPlaying) {
+      _handleOutOfFuel();
+    }
+  }
+
+  void _handleGameOver() {
+    print('🎮 Game Over - Sin vidas');
+    _isPlaying = false;
+    gameState.setPlaying(false);
+    pauseEngine();
+    overlays.remove('PauseButton');
+    overlays.add('GameOver');
+  }
+
+  void _handleOutOfFuel() {
+    print('⛽ Game Over - Sin gasolina');
+    // Perder una vida por quedarse sin gasolina
+    gameState.loseLife();
+    
+    if (!gameState.isGameOver) {
+      // Si aún tiene vidas, restaurar gasolina parcialmente
+      // (esto se puede ajustar según el balance del juego)
+      print('💔 Vida perdida por falta de gasolina');
+    }
+  }
 
   @override
   Future<void> onLoad() async {
@@ -48,16 +85,27 @@ class CarritoGame extends FlameGame
   Future<void> _preloadImages() async {
     if (_imagesPreloaded) return;
 
+    // Imágenes de UI
     await images.loadAll([
       'gas_station_landscape.png',
       'gas_station_portrait.png',
-      'carrito_landscape.png',
-      'carrito_portrait.png',
       'coin.png',
       'obstacle_jumpable.png',
       'obstacle_nonjumpable.png',
     ]);
 
+    // 🖼️ Cargar el carrito por defecto desde assets/cars/
+    // Nota: Según tus especificaciones, los carritos están en assets/cars/
+    try {
+      await images.loadAll([
+        'carrito_landscape.png',  // Temporal, luego será cars/car_default_landscape.png
+        'carrito_portrait.png',   // Temporal, luego será cars/car_default_portrait.png
+      ]);
+    } catch (e) {
+      print('⚠️ Error cargando carritos: $e');
+    }
+
+    // Cargar backgrounds por escenario (0-4)
     for (int i = 0; i < 5; i++) {
       await images.load('road_landscape_$i.png');
       await images.load('road_portrait_$i.png');
@@ -94,6 +142,9 @@ class CarritoGame extends FlameGame
   @override
   void update(double dt) {
     super.update(dt);
+    
+    if (!_isPlaying) return;
+    
     gameState.updateTime(dt);
 
     if (gameState.shouldSpawnGasStation() && !_waitingForGasStation) {
@@ -199,6 +250,10 @@ class CarritoGame extends FlameGame
     children.whereType<GasStationComponent>().toList().forEach(
       (c) => c.removeFromParent(),
     );
+    // ⭐ NUEVO: Limpiar power-ups
+    children.where((c) => c.runtimeType.toString().contains('PowerUp')).toList().forEach(
+      (c) => c.removeFromParent(),
+    );
 
     await Future.delayed(Duration.zero);
 
@@ -211,8 +266,15 @@ class CarritoGame extends FlameGame
     _obstacleSpawner = ObstacleSpawner(
       isLandscape: _isLandscape,
       gameSpeed: 200.0,
+      gameState: gameState, // ⭐ NUEVO: Pasar gameState al spawner
     );
     _obstacleSpawner!.setTheme(_currentTheme);
     add(_obstacleSpawner!);
+  }
+
+  @override
+  void onRemove() {
+    gameState.removeListener(_onGameStateChanged);
+    super.onRemove();
   }
 }
