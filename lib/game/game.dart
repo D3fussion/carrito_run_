@@ -3,6 +3,7 @@ import 'package:carrito_run/game/components/coin_component.dart';
 import 'package:carrito_run/game/components/gas_station_component.dart';
 import 'package:carrito_run/game/components/obstacle_component.dart';
 import 'package:carrito_run/game/managers/background_manager.dart';
+import 'package:carrito_run/game/managers/car_manager.dart';
 import 'package:carrito_run/game/managers/obstacle_spawner.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/events.dart';
@@ -15,6 +16,7 @@ class CarritoGame extends FlameGame
         TapCallbacks,
         HasCollisionDetection {
   final GameState gameState;
+  final CarManager carManager; // ⭐ NUEVO
 
   late BackgroundManager _backgroundManager;
   CarritoComponent? _carrito;
@@ -29,7 +31,7 @@ class CarritoGame extends FlameGame
   bool _waitingForGasStation = false;
   bool _imagesPreloaded = false;
 
-  CarritoGame({required this.gameState}) {
+  CarritoGame({required this.gameState, required this.carManager}) { // ⭐ NUEVO
     // Escuchar cambios en el estado del juego
     gameState.addListener(_onGameStateChanged);
   }

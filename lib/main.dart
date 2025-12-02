@@ -2,10 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/overlays/loading_screen.dart';
 import 'package:carrito_run/game/overlays/refuel_overlay.dart';
+import 'package:carrito_run/game/overlays/car_selection_menu.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:carrito_run/game/overlays/start_screen.dart';
 import 'package:carrito_run/game/overlays/pause_menu.dart';
 import 'package:carrito_run/game/overlays/pause_button.dart';
+import 'package:carrito_run/game/managers/car_manager.dart';
+import 'package:carrito_run/services/storage_service.dart';
 import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -24,9 +27,9 @@ Future<void> main() async {
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(
-      size: Size(1000, 700),           // Tamaño inicial más grande
-      minimumSize: Size(800, 600),     // ⭐ TAMAÑO MÍNIMO - No se puede achicar más
-      maximumSize: Size(1920, 1080),   // Tamaño máximo opcional
+      size: Size(1000, 700),
+      minimumSize: Size(800, 600),
+      maximumSize: Size(1920, 1080),
       center: true,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
@@ -52,7 +55,22 @@ Future<void> main() async {
     await Flame.device.fullScreen();
   }
 
-  runApp(ChangeNotifierProvider(create: (_) => GameState(), child: MyApp()));
+  // ⭐ NUEVO: Inicializar servicios
+  final storageService = StorageService();
+  await storageService.initialize();
+  
+  final carManager = CarManager(storageService);
+  await carManager.initialize();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => GameState()),
+        ChangeNotifierProvider.value(value: carManager), // ⭐ NUEVO
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -88,7 +106,8 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     final gameState = Provider.of<GameState>(context, listen: false);
-    game = CarritoGame(gameState: gameState);
+    final carManager = Provider.of<CarManager>(context, listen: false); // ⭐ NUEVO
+    game = CarritoGame(gameState: gameState, carManager: carManager); // ⭐ NUEVO
   }
 
   @override
@@ -108,9 +127,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   PauseButton(game: game as CarritoGame),
               'RefuelOverlay': (context, game) =>
                   RefuelOverlay(game: game as CarritoGame),
-              // ⭐ NUEVO: Overlay para Game Over
               'GameOver': (context, game) =>
                   _buildGameOverScreen(game as CarritoGame),
+              // ⭐ NUEVO: Menú de selección de carritos
+              'CarSelectionMenu': (context, game) =>
+                  CarSelectionMenu(game: game as CarritoGame),
             },
             initialActiveOverlays: const ['StartScreen'],
           ),
@@ -150,10 +171,8 @@ class _MyHomePageState extends State<MyHomePage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Lado izquierdo: Vidas
           _buildLivesDisplay(gameState.lives, gameState.maxLives),
           const Spacer(),
-          // Lado derecho: Stats
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
@@ -190,10 +209,8 @@ class _MyHomePageState extends State<MyHomePage> {
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       child: Column(
         children: [
-          // Primera fila: Vidas centradas
           Center(child: _buildLivesDisplay(gameState.lives, gameState.maxLives)),
           const SizedBox(height: 10),
-          // Segunda fila: Score y Monedas
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -202,7 +219,6 @@ class _MyHomePageState extends State<MyHomePage> {
             ],
           ),
           const SizedBox(height: 10),
-          // Tercera fila: Gasolina y Sección
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -219,10 +235,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // ============ WIDGET DE VIDAS ============
-  // 🖼️ IMAGEN FUTURA: assets/ui/heart_full.png (corazón rojo pixel art 32x32)
-  // 🖼️ IMAGEN FUTURA: assets/ui/heart_empty.png (corazón gris pixel art 32x32)
-  // Por ahora usa Icons de Flutter
   Widget _buildLivesDisplay(int currentLives, int maxLives) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
@@ -294,7 +306,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // 🖼️ IMAGEN: assets/ui/coin.png (moneda dorada pixel art 64x64)
   Widget _buildCoinCounter(int coins) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -518,6 +529,16 @@ class _MyHomePageState extends State<MyHomePage> {
               const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: () {
+                  // ⭐ NUEVO: Guardar progreso al terminar
+                  final gameState = Provider.of<GameState>(context, listen: false);
+                  final carManager = Provider.of<CarManager>(context, listen: false);
+                  
+                  carManager.updateAfterGame(
+                    coinsEarned: gameState.coins,
+                    sectionReached: gameState.currentSection,
+                    finalScore: gameState.score,
+                  );
+                  
                   game.overlays.remove('GameOver');
                   game.resetGame();
                   game.overlays.add('StartScreen');
