@@ -30,6 +30,7 @@ class CarritoComponent extends PositionComponent
   bool _isOnObstacle = false;
 
   double _jumpGraceTimer = 0.0;
+  double _hitGraceTimer = 0.0;
 
   final double dragThreshold = 10.0;
   Vector2 _basePosition = Vector2.zero();
@@ -124,9 +125,9 @@ class CarritoComponent extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
-    if (_jumpGraceTimer > 0) {
-      _jumpGraceTimer -= dt;
-    }
+
+    if (_jumpGraceTimer > 0) _jumpGraceTimer -= dt;
+    if (_hitGraceTimer > 0) _hitGraceTimer -= dt;
   }
 
   void jump() {
@@ -245,19 +246,16 @@ class CarritoComponent extends PositionComponent
         if (_jumpGraceTimer > 0) return;
 
         if (_isJumping) {
-          debugPrint("Aterrizando en plataforma");
           _platformsInContact.add(other);
           _isOnObstacle = true;
           _stopJumpEffect();
           return;
-        } else if (_isOnObstacle && _platformsInContact.isNotEmpty) {
+        } else if (_isOnObstacle) {
           _platformsInContact.add(other);
-          return;
-        } else {
-          _handleCollision(other);
           return;
         }
       }
+
       _handleCollision(other);
     }
   }
@@ -302,6 +300,20 @@ class CarritoComponent extends PositionComponent
   }
 
   void _handleCollision(ObstacleComponent obstacle) {
-    debugPrint('¡Colisión con obstáculo ${obstacle.type}!');
+    if (_hitGraceTimer > 0) return;
+
+    debugPrint('¡GOLPE! Perdiendo combustible...');
+
+    gameState.takeHit();
+
+    _hitGraceTimer = 1.0;
+
+    _visualSprite?.add(
+      ColorEffect(
+        Colors.red,
+        EffectController(duration: 0.2, alternate: true, repeatCount: 3),
+        opacityTo: 0.7,
+      ),
+    );
   }
 }

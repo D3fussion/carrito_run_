@@ -13,10 +13,13 @@ class GameState extends ChangeNotifier {
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
 
+  // Daño por golpe (30% del total)
+  final double _collisionDamage = 30.0;
+
   // Sistema de gasolina
   double _fuel = 100.0;
   final double _maxFuel = 100.0;
-  final double _fuelConsumptionRate = 5.0;
+  final double _fuelConsumptionRate = 1.15;
 
   // Sistema de secciones basado en puntaje interno
   int _currentSection = 1;
@@ -121,6 +124,14 @@ class GameState extends ChangeNotifier {
     _nextGasStationScore = _firstGasStation;
     _refuelCost = _baseCost;
     _safeNotifyListeners();
+  }
+
+  void takeHit() {
+    if (_fuel > 0) {
+      _fuel -= _collisionDamage;
+      if (_fuel < 0) _fuel = 0;
+      _safeNotifyListeners();
+    }
   }
 
   void _safeNotifyListeners() {
