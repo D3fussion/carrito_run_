@@ -15,10 +15,9 @@ class StartScreen extends StatelessWidget {
       color: Colors.transparent,
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade900, Colors.purple.shade900],
+          image: DecorationImage(
+            image: AssetImage('assets/images/fondo_gato.png'),
+            fit: BoxFit.cover,
           ),
         ),
         child: Center(
@@ -30,9 +29,9 @@ class StartScreen extends StatelessWidget {
                 width: 300,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: const Color.fromARGB(255, 130, 130, 130).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white, width: 3),
+                  border: Border.all(color: const Color.fromARGB(255, 129, 129, 129), width: 3),
                 ),
                 child: Center(
                   child: Text(
