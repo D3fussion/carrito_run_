@@ -19,7 +19,7 @@ class CoinComponent extends SpriteComponent
   Future<void> onLoad() async {
     await super.onLoad();
 
-    sprite = await game.loadSprite('coin.png');
+    sprite = await game.loadSprite('ui/coin.png');
 
     priority = isOnObstacle ? 8 : 5;
 

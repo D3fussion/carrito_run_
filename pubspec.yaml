@@ -28,5 +28,6 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/ui/
     - assets/cars/
     - assets/ui/

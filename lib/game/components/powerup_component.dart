@@ -4,7 +4,7 @@ import 'package:carrito_run/game/states/game_state.dart';
 
 /// Tipos de power-ups disponibles
 enum PowerUpType {
-  fuel,      // ⛽ Recarga de gasolina parcial
+  fuel, // ⛽ Recarga de gasolina parcial
   extraLife, // ❤️ Vida extra
 }
 
@@ -32,7 +32,7 @@ class PowerUpComponent extends SpriteComponent
     // 🖼️ IMÁGENES REQUERIDAS:
     // assets/ui/powerup_fuel.png - Lata de gasolina (relación 1:1, 64x64px)
     // assets/ui/powerup_heart.png - Corazón (relación 1:1, 64x64px)
-    // 
+    //
     // Temporalmente usa colores de placeholder
     sprite = await _loadSpriteForType();
 
@@ -50,16 +50,16 @@ class PowerUpComponent extends SpriteComponent
     try {
       switch (type) {
         case PowerUpType.fuel:
-          // 🖼️ Cargar: assets/ui/powerup_fuel.png
-          return await game.loadSprite('powerup_fuel.png');
+          // 🖼️ Cargar: assets/images/ui/powerup_fuel.png
+          return await game.loadSprite('ui/powerup_fuel.png');
         case PowerUpType.extraLife:
-          // 🖼️ Cargar: assets/ui/powerup_heart.png
-          return await game.loadSprite('powerup_heart.png');
+          // 🖼️ Cargar: assets/images/ui/powerup_heart.png
+          return await game.loadSprite('ui/powerup_heart.png');
       }
     } catch (e) {
       // Si no existe la imagen, usa coin.png como placeholder
       print('⚠️ Power-up sprite no encontrado, usando placeholder');
-      return await game.loadSprite('coin.png');
+      return await game.loadSprite('ui/coin.png');
     }
   }
 
