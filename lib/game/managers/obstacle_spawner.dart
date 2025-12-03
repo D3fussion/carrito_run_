@@ -357,7 +357,7 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
     ];
 
     final cityPatterns = [
-      // 1. La Valla Doble con Salida (MODIFICADO)
+      // 1. La Valla Doble con Salida
       // Vallas en 1 y 3. Centro (2) tiene un obstáculo SALTABLE.
       // Puedes esquivar a los extremos (0 y 4) o saltar por el centro.
       ObstaclePattern(
@@ -416,7 +416,7 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
         duration: 2.0,
       ),
 
-      // 3. Salto Mojado (MODIFICADO)
+      // 3. Salto Mojado
       // Charco en carril 2, seguido INMEDIATAMENTE de un saltable.
       // Si pisas el charco, chocas con el saltable. Debes saltar TODO junto.
       ObstaclePattern(
@@ -497,7 +497,7 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
         duration: 1.5,
       ),
 
-      // 6. Barrera Escalonada con Trampa (MODIFICADO)
+      // 6. Barrera Escalonada con Trampa
       // Vallas en escalera, pero el camino "libre" (carril 3) tiene un saltable sorpresa.
       ObstaclePattern(
         obstacles: [
@@ -555,7 +555,7 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
         duration: 2.0,
       ),
 
-      // 8. Piso Resbaladizo Mixto (MODIFICADO)
+      // 8. Piso Resbaladizo Mixto
       // Agua en los lados, saltables en el centro.
       ObstaclePattern(
         obstacles: [
@@ -961,11 +961,284 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
       ),
     ];
 
+    final icePatterns = [
+      // 1. El Francotirador (Snowball Central)
+      // Una bola rápida por el centro. Fácil, pero te obliga a quitarte.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.0),
+        ],
+        duration: 1.0, // Muy corto porque la bola es rápida
+      ),
+
+      // 2. La Avalancha en V
+      // Bolas en 0, 1, 3, 4. Solo el 2 es seguro... por ahora.
+      // Si te quedas en el 2 mucho tiempo por miedo, te congelas.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.5,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.5,
+          ),
+        ],
+        coins: [CoinSpawnInfo(lane: 2, delayFromStart: 0.0)],
+        duration: 1.5,
+      ),
+
+      // 3. Slalom Obligatorio
+      // Muros estáticos alternados. Te obligan a moverte (reseteando tu frío).
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 0, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 4, delayFromStart: 0.0),
+        ],
+        duration: 2.0,
+      ),
+
+      // 4. Barrera de Nieve Saltable
+      // 3 Bolas de nieve juntas. Como son bajas (esferas), ¿quizás se pueden saltar?
+      // No, obstacle_type snowball es daño. Mejor poner saltables normales detrás.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.0,
+          ),
+          // Troncos de hielo en los huecos
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.5,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.5,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.5, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+
+      // 5. Persecución
+      // Bola de nieve en tu carril probable (2), seguida de otra en 1 y 3.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.8,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [CoinSpawnInfo(lane: 2, delayFromStart: 1.0)],
+        duration: 1.5,
+      ),
+
+      // 6. El Muro Móvil
+      // 5 Bolas de nieve escalonadas. Parecen una ola.
+      // 0->0.0, 1->0.2, 2->0.4, 3->0.6, 4->0.8
+      // Debes correr hacia el lado opuesto (del 4 al 0) rápido.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.3,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.6,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.9,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.snowball,
+            delayFromStart: 1.2,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 4, delayFromStart: 0.0),
+        ], // Recompensa por estar en el lado peligroso inicial
+        duration: 2.5,
+      ),
+
+      // 7. Bloqueo Estático + Amenaza Rápida
+      // Muros en 0 y 4. Bola de nieve bajando por el 2.
+      // Solo 1 y 3 son seguros.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.5,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.0),
+        ],
+        duration: 1.5,
+      ),
+
+      // 8. Salto Doble sobre Hielo
+      // Dos filas de saltables. Como saltar dura tiempo, tu medidor de frío sube.
+      // Al aterrizar del segundo salto, DEBES cambiar de carril inmediatamente.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0, isOnObstacle: true),
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.8, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+
+      // 9. La Trampa del Frío
+      // Nada de obstáculos por 1.5 segundos.
+      // El jugador se confía, se queda quieto... ¡Y SE CONGELA!
+      // Luego aparece una bola de nieve sorpresa.
+      ObstaclePattern(
+        obstacles: [
+          // Aparece muy tarde
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.snowball,
+            delayFromStart: 1.5,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 0, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 4, delayFromStart: 0.0),
+        ],
+        duration: 2.0,
+      ),
+
+      // 10. Caos Total
+      // Mezcla de todo. Bola rápida en 1, Muro en 3, Saltable en 2 (tardío).
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.snowball,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.8, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+    ];
+
     _patternsByTheme = {
       0: basePatterns,
       1: cityPatterns,
       2: forestPatterns,
-      3: basePatterns,
+      3: icePatterns,
       4: basePatterns,
     };
   }

@@ -50,6 +50,11 @@ class CarritoComponent extends PositionComponent
   final double dragThreshold = 10.0;
   Vector2 _basePosition = Vector2.zero();
 
+  // -- Variables de la seccion de hielo
+  double _iceCampingTimer = 0.0; // Tiempo lógico (0 a 2.0s)
+  double _currentIceTintIntensity = 0.0;
+  final double _maxIceTime = 2.0;
+
   double get laneChangeDuration {
     double baseDuration = 0.15 / game.gameState.speedMultiplier;
 
@@ -160,6 +165,34 @@ class CarritoComponent extends PositionComponent
         _removeSlowVisuals();
       }
     }
+
+    bool isIceSection = (gameState.currentSection - 1) % 5 == 3;
+
+    if (isIceSection && !_hasExploded) {
+      if (!_isMoving) {
+        _iceCampingTimer += dt;
+      } else {
+        _iceCampingTimer = 0.0;
+      }
+
+      if (_iceCampingTimer >= _maxIceTime) {
+        debugPrint("¡CONGELADO! Daño recibido.");
+        gameState.takeHit(); // Daño (-30%)
+        _iceCampingTimer = 0.0; // Reseteamos lógica
+
+        _visualSprite?.add(
+          ColorEffect(
+            Colors.red,
+            EffectController(duration: 0.2, alternate: true, repeatCount: 2),
+            opacityTo: 0.8,
+          ),
+        );
+      }
+    } else {
+      _iceCampingTimer = 0.0;
+    }
+
+    _updateIceVisuals(dt);
   }
 
   void _triggerExplosionVisuals() {
@@ -470,6 +503,28 @@ class CarritoComponent extends PositionComponent
 
       if (_fuelPenaltyEffect == null) {
         _visualSprite?.paint.colorFilter = null;
+      }
+    }
+  }
+
+  void _updateIceVisuals(double dt) {
+    double targetIntensity = (_iceCampingTimer / _maxIceTime) * 0.8;
+
+    double speed = (targetIntensity > _currentIceTintIntensity) ? 1.0 : 10.0;
+
+    double diff = targetIntensity - _currentIceTintIntensity;
+    _currentIceTintIntensity += diff * speed * dt;
+
+    if (_fuelPenaltyEffect == null &&
+        _slowEffectVisual == null &&
+        _visualSprite != null) {
+      if (_currentIceTintIntensity > 0.01) {
+        _visualSprite!.paint.colorFilter = ColorFilter.mode(
+          Colors.cyan.withOpacity(_currentIceTintIntensity),
+          BlendMode.srcATop,
+        );
+      } else {
+        _visualSprite!.paint.colorFilter = null;
       }
     }
   }

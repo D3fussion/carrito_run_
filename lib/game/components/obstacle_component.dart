@@ -6,7 +6,8 @@ enum ObstacleType {
   jumpable, // Plataformas elevadas (Cajas, etc)
   nonJumpable, // Muros altos (No pasables)
   puddle, // Charco (Piso, efecto slow) <--- NUEVO
-  barrier, // Valla (Saltable o No, definiremos como No Saltable o Alto) <--- NUEVO
+  barrier, // Valla (Saltable o No, definiremos como No Saltable o Alto)
+  snowball, // Bola de nieve
 }
 
 class ObstacleComponent extends SpriteComponent
@@ -44,6 +45,10 @@ class ObstacleComponent extends SpriteComponent
 
       case ObstacleType.barrier:
         spriteName = 'barrier.png';
+        break;
+
+      case ObstacleType.snowball:
+        spriteName = 'snowball.png';
         break;
     }
 
@@ -103,13 +108,18 @@ class ObstacleComponent extends SpriteComponent
   @override
   void update(double dt) {
     super.update(dt);
-    final currentSpeed = game.gameState.currentSpeed;
+
+    double moveSpeed = game.gameState.currentSpeed;
+
+    if (type == ObstacleType.snowball) {
+      moveSpeed *= 1.8;
+    }
 
     if (isLandscape) {
-      position.x -= currentSpeed * dt;
+      position.x -= moveSpeed * dt;
       if (position.x < -size.x) removeFromParent();
     } else {
-      position.y += currentSpeed * dt;
+      position.y += moveSpeed * dt;
       if (position.y > game.size.y + size.y) removeFromParent();
     }
   }
