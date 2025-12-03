@@ -356,9 +356,310 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
       ),
     ];
 
+    final cityPatterns = [
+      // 1. La Valla Doble con Salida (MODIFICADO)
+      // Vallas en 1 y 3. Centro (2) tiene un obstáculo SALTABLE.
+      // Puedes esquivar a los extremos (0 y 4) o saltar por el centro.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(
+            lane: 2,
+            delayFromStart: 0.0,
+            isOnObstacle: true,
+          ), // Premio por saltar
+          CoinSpawnInfo(lane: 0, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 4, delayFromStart: 0.0),
+        ],
+        duration: 1.5,
+      ),
+
+      // 2. Campo Minado de Charcos (IGUAL)
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.puddle,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.puddle,
+            delayFromStart: 0.5,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.puddle,
+            delayFromStart: 1.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.0),
+        ],
+        duration: 2.0,
+      ),
+
+      // 3. Salto Mojado (MODIFICADO)
+      // Charco en carril 2, seguido INMEDIATAMENTE de un saltable.
+      // Si pisas el charco, chocas con el saltable. Debes saltar TODO junto.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.puddle,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.4,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.4, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+
+      // 4. Obras en la Vía (IGUAL)
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.8,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.8),
+        ],
+        duration: 2.0,
+      ),
+
+      // 5. Parkour Urbano (NUEVO)
+      // Serie de obstáculos saltables en zigzag.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.4,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.0, isOnObstacle: true),
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.4, isOnObstacle: true),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.8, isOnObstacle: true),
+        ],
+        duration: 1.5,
+      ),
+
+      // 6. Barrera Escalonada con Trampa (MODIFICADO)
+      // Vallas en escalera, pero el camino "libre" (carril 3) tiene un saltable sorpresa.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.4,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.8,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.8,
+          ), // ¡Sorpresa!
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 4, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.8, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+
+      // 7. Trampa de Velocidad (IGUAL)
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.puddle,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.6,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.6,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 0, delayFromStart: 0.6),
+          CoinSpawnInfo(lane: 4, delayFromStart: 0.6),
+        ],
+        duration: 2.0,
+      ),
+
+      // 8. Piso Resbaladizo Mixto (MODIFICADO)
+      // Agua en los lados, saltables en el centro.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.puddle,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.puddle,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0, isOnObstacle: true),
+        ],
+        duration: 1.5,
+      ),
+
+      // 9. Construcción Masiva (IGUAL)
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.puddle,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.puddle,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.5),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.5),
+        ],
+        duration: 2.0,
+      ),
+
+      // 10. El Muro Saltable de Ciudad (NUEVO)
+      // 3 carriles bloqueados por saltables (1, 2, 3).
+      // Vallas en 0 y 4 un poco después.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.8,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.barrier,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.0, isOnObstacle: true),
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0, isOnObstacle: true),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.0, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+    ];
+
     _patternsByTheme = {
       0: basePatterns,
-      1: basePatterns,
+      1: cityPatterns,
       2: basePatterns,
       3: basePatterns,
       4: basePatterns,
@@ -455,6 +756,7 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
       isLandscape: isLandscape,
       lane: lane,
       type: type,
+      theme: _currentTheme,
     );
     game.add(obstacle);
   }

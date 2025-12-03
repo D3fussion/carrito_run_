@@ -1,10 +1,12 @@
-import 'package:carrito_run/game/game.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:carrito_run/game/game.dart';
 
 enum ObstacleType {
-  jumpable, // Se puede saltar sobre él
-  nonJumpable, // Hay que esquivarlo cambiando de carril
+  jumpable, // Plataformas elevadas (Cajas, etc)
+  nonJumpable, // Muros altos (No pasables)
+  puddle, // Charco (Piso, efecto slow) <--- NUEVO
+  barrier, // Valla (Saltable o No, definiremos como No Saltable o Alto) <--- NUEVO
 }
 
 class ObstacleComponent extends SpriteComponent
@@ -12,26 +14,50 @@ class ObstacleComponent extends SpriteComponent
   final bool isLandscape;
   final int lane;
   final ObstacleType type;
-  final double gameSpeed;
+  final int theme;
 
   ObstacleComponent({
     required this.isLandscape,
     required this.lane,
     required this.type,
-    this.gameSpeed = 200.0,
+    required this.theme,
   });
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
-    sprite = await game.loadSprite(
-      type == ObstacleType.jumpable
-          ? 'obstacle_jumpable.png'
-          : 'obstacle_nonjumpable.png',
-    );
+    String spriteName;
 
-    priority = 5;
+    switch (type) {
+      case ObstacleType.jumpable:
+        spriteName = 'obstacle_jumpable_$theme.png';
+        break;
+
+      case ObstacleType.nonJumpable:
+        spriteName = 'obstacle_nonjumpable_$theme.png';
+        break;
+
+      case ObstacleType.puddle:
+        spriteName = 'puddle.png';
+        break;
+
+      case ObstacleType.barrier:
+        spriteName = 'barrier.png';
+        break;
+    }
+
+    try {
+      sprite = await game.loadSprite(spriteName);
+    } catch (e) {
+      // Fallback al tema 0 si falta la imagen del tema actual
+      if (type == ObstacleType.jumpable)
+        sprite = await game.loadSprite('obstacle_jumpable_0.png');
+      if (type == ObstacleType.nonJumpable)
+        sprite = await game.loadSprite('obstacle_nonjumpable_0.png');
+    }
+
+    priority = (type == ObstacleType.puddle) ? 2 : 5;
 
     _updateSize();
     anchor = Anchor.center;
@@ -42,7 +68,6 @@ class ObstacleComponent extends SpriteComponent
 
   void _updateSize() {
     final gameSize = game.size;
-
     if (isLandscape) {
       final laneHeight = gameSize.y / 5;
       final obstacleSize = laneHeight * 0.8;
@@ -56,7 +81,6 @@ class ObstacleComponent extends SpriteComponent
 
   void _updatePosition() {
     final gameSize = game.size;
-
     if (isLandscape) {
       position.x = gameSize.x + size.x;
       position.y = _getLanePositionY(gameSize.y);
@@ -79,29 +103,14 @@ class ObstacleComponent extends SpriteComponent
   @override
   void update(double dt) {
     super.update(dt);
-
     final currentSpeed = game.gameState.currentSpeed;
 
     if (isLandscape) {
       position.x -= currentSpeed * dt;
-
-      if (position.x < -size.x) {
-        removeFromParent();
-      }
+      if (position.x < -size.x) removeFromParent();
     } else {
       position.y += currentSpeed * dt;
-
-      if (position.y > game.size.y + size.y) {
-        removeFromParent();
-      }
+      if (position.y > game.size.y + size.y) removeFromParent();
     }
-  }
-
-  @override
-  void onCollisionStart(
-    Set<Vector2> intersectionPoints,
-    PositionComponent other,
-  ) {
-    super.onCollisionStart(intersectionPoints, other);
   }
 }

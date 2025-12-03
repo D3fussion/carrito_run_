@@ -1,49 +1,63 @@
-import 'package:carrito_run/game/components/coin_component.dart';
-import 'package:carrito_run/game/components/fuel_canister_component.dart';
-import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
+import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flame/collisions.dart';
-import 'obstacle_component.dart';
+
 import 'package:carrito_run/game/game.dart';
+import 'package:carrito_run/game/states/game_state.dart';
+import 'package:carrito_run/game/components/obstacle_component.dart';
+import 'package:carrito_run/game/components/coin_component.dart';
+import 'package:carrito_run/game/components/fuel_canister_component.dart';
 
 class CarritoComponent extends PositionComponent
     with KeyboardHandler, HasGameReference<CarritoGame>, CollisionCallbacks {
   final bool isLandscape;
   final GameState gameState;
 
+  // -- Configuración de Carriles --
   int currentLane = 2;
   final int totalLanes = 5;
-  Effect? _jumpEffect;
 
+  // -- Variables Visuales --
   SpriteComponent? _visualSprite;
   Sprite? _cachedExplosionSprite;
+  Effect? _jumpEffect;
 
-  ObstacleComponent? _platformToIgnore;
+  // Control de efectos de color (Para evitar conflictos)
+  ColorEffect? _fuelPenaltyEffect; // Rojo (Desierto)
+  ColorEffect? _slowEffectVisual; // Azul (Charco)
 
-  bool _hasExploded = false;
-
-  double get laneChangeDuration => 0.15 / game.gameState.speedMultiplier;
-
-  final double jumpDuration = 0.5;
-  final double jumpScale = 1.3;
-  final double platformScale = 1.15;
-
+  // -- Variables de Lógica --
   bool _isMoving = false;
   bool _isJumping = false;
   bool _isOnObstacle = false;
+  bool _hasExploded = false;
 
-  double _jumpGraceTimer = 0.0;
-  double _hitGraceTimer = 0.0;
+  // -- Timers --
+  double _jumpGraceTimer = 0.0; // Inmunidad al despegar
+  double _hitGraceTimer = 0.0; // Inmunidad tras recibir golpe
+  double _slowDebuffTimer = 0.0; // Tiempo del efecto lento
 
-  ColorEffect? _fuelPenaltyEffect;
+  // -- Referencias --
+  ObstacleComponent? _platformToIgnore; // Plataforma de la que saltamos
+  final Set<ObstacleComponent> _platformsInContact = {};
 
+  // -- Constantes de Animación --
+  final double jumpDuration = 0.5;
+  final double jumpScale = 1.3;
+  final double platformScale = 1.15;
   final double dragThreshold = 10.0;
   Vector2 _basePosition = Vector2.zero();
 
-  final Set<ObstacleComponent> _platformsInContact = {};
+  double get laneChangeDuration {
+    double baseDuration = 0.15 / game.gameState.speedMultiplier;
+
+    if (_slowDebuffTimer > 0) {
+      return baseDuration * 2.0;
+    }
+    return baseDuration;
+  }
 
   CarritoComponent({required this.isLandscape, required this.gameState});
 
@@ -64,7 +78,7 @@ class CarritoComponent extends PositionComponent
     try {
       _cachedExplosionSprite = await game.loadSprite('explosion.png');
     } catch (e) {
-      debugPrint("ERROR: No se encontró explosion.png");
+      debugPrint("Error cargando explosion.png: $e");
     }
 
     _updateSize();
@@ -124,22 +138,6 @@ class CarritoComponent extends PositionComponent
     return (currentLane + 0.5) * laneHeight;
   }
 
-  void handleDrag(Vector2 delta) {
-    if (_hasExploded) return;
-    if (_isMoving) return;
-    if (isLandscape) {
-      if (delta.y > dragThreshold)
-        _changeLane(1);
-      else if (delta.y < -dragThreshold)
-        _changeLane(-1);
-    } else {
-      if (delta.x > dragThreshold)
-        _changeLane(1);
-      else if (delta.x < -dragThreshold)
-        _changeLane(-1);
-    }
-  }
-
   @override
   void update(double dt) {
     super.update(dt);
@@ -150,19 +148,24 @@ class CarritoComponent extends PositionComponent
 
     if (_jumpGraceTimer > 0) {
       _jumpGraceTimer -= dt;
-      if (_jumpGraceTimer <= 0) {
-        _platformToIgnore = null;
-      }
+      if (_jumpGraceTimer <= 0) _platformToIgnore = null;
     }
 
     if (_hitGraceTimer > 0) _hitGraceTimer -= dt;
+
+    if (_slowDebuffTimer > 0) {
+      _slowDebuffTimer -= dt;
+      if (_slowDebuffTimer <= 0) {
+        _slowDebuffTimer = 0;
+        _removeSlowVisuals();
+      }
+    }
   }
 
   void _triggerExplosionVisuals() {
     if (_cachedExplosionSprite == null) return;
 
     _hasExploded = true;
-
     _isMoving = false;
     _isJumping = false;
     _isOnObstacle = false;
@@ -186,8 +189,24 @@ class CarritoComponent extends PositionComponent
         ]),
       );
     }
-
     anchor = Anchor.center;
+  }
+
+  void handleDrag(Vector2 delta) {
+    if (_hasExploded) return;
+    if (_isMoving) return;
+
+    if (isLandscape) {
+      if (delta.y > dragThreshold)
+        _changeLane(1);
+      else if (delta.y < -dragThreshold)
+        _changeLane(-1);
+    } else {
+      if (delta.x > dragThreshold)
+        _changeLane(1);
+      else if (delta.x < -dragThreshold)
+        _changeLane(-1);
+    }
   }
 
   @override
@@ -196,11 +215,14 @@ class CarritoComponent extends PositionComponent
 
     final isKeyDown = event is KeyDownEvent;
     if (!isKeyDown) return true;
+
     if (keysPressed.contains(LogicalKeyboardKey.space)) {
       jump();
       return false;
     }
+
     if (_isMoving) return true;
+
     if (isLandscape) {
       if (keysPressed.contains(LogicalKeyboardKey.arrowDown)) {
         _changeLane(1);
@@ -230,30 +252,6 @@ class CarritoComponent extends PositionComponent
     }
   }
 
-  void _checkLanePenalty() {
-    bool isDesertTheme = (gameState.currentSection - 1) % 5 == 0;
-    bool isOffRoad = currentLane == 0 || currentLane == 4;
-
-    if (isDesertTheme && isOffRoad) {
-      gameState.setOffRoad(true);
-      if (_fuelPenaltyEffect == null && _visualSprite != null) {
-        _fuelPenaltyEffect = ColorEffect(
-          Colors.red,
-          EffectController(duration: 0.5, alternate: true, infinite: true),
-          opacityTo: 0.6,
-        );
-        _visualSprite!.add(_fuelPenaltyEffect!);
-      }
-    } else {
-      gameState.setOffRoad(false);
-      if (_fuelPenaltyEffect != null) {
-        _fuelPenaltyEffect!.removeFromParent();
-        _fuelPenaltyEffect = null;
-        _visualSprite?.paint.colorFilter = null;
-      }
-    }
-  }
-
   void _animateToLane() {
     final gameSize = game.size;
     Vector2 targetPosition;
@@ -262,11 +260,13 @@ class CarritoComponent extends PositionComponent
     } else {
       targetPosition = Vector2(_getLanePositionX(gameSize.x), position.y);
     }
+
     _isMoving = true;
+
     children.whereType<MoveToEffect>().forEach((effect) {
-      if (effect.controller.duration == laneChangeDuration)
-        effect.removeFromParent();
+      effect.removeFromParent();
     });
+
     add(
       MoveToEffect(
         targetPosition,
@@ -319,6 +319,23 @@ class CarritoComponent extends PositionComponent
     add(_jumpEffect!);
   }
 
+  void _stopJumpEffect() {
+    if (_jumpEffect != null) {
+      _jumpEffect!.removeFromParent();
+      _jumpEffect = null;
+      _isJumping = false;
+
+      children.whereType<ScaleEffect>().forEach((e) => e.removeFromParent());
+
+      _visualSprite?.add(
+        ScaleEffect.to(
+          Vector2.all(platformScale),
+          EffectController(duration: 0.1, curve: Curves.easeOut),
+        ),
+      );
+    }
+  }
+
   @override
   void onCollisionStart(
     Set<Vector2> intersectionPoints,
@@ -332,19 +349,29 @@ class CarritoComponent extends PositionComponent
       other.removeFromParent();
       return;
     }
+
     if (other is FuelCanisterComponent) {
       gameState.collectFuelCanister();
       other.removeFromParent();
+      _visualSprite?.add(
+        ColorEffect(
+          Colors.green,
+          EffectController(duration: 0.2, alternate: true, repeatCount: 2),
+          opacityTo: 0.7,
+        ),
+      );
       return;
     }
 
     if (other is ObstacleComponent) {
-      if (other.type == ObstacleType.jumpable) {
-        bool isTakingOff = _jumpGraceTimer > 0 && other == _platformToIgnore;
+      if (other.type == ObstacleType.puddle) {
+        _applySlowDebuff();
+        return;
+      }
 
-        if (isTakingOff) {
-          return; 
-        }
+      if (other.type == ObstacleType.jumpable) {
+        if (_jumpGraceTimer > 0 && other == _platformToIgnore) return;
+
         if (_isJumping) {
           _platformsInContact.add(other);
           _isOnObstacle = true;
@@ -358,6 +385,7 @@ class CarritoComponent extends PositionComponent
           return;
         }
       }
+
       _handleCollision(other);
     }
   }
@@ -381,25 +409,11 @@ class CarritoComponent extends PositionComponent
     }
   }
 
-  void _stopJumpEffect() {
-    if (_jumpEffect != null) {
-      _jumpEffect!.removeFromParent();
-      _jumpEffect = null;
-      _isJumping = false;
-      children.whereType<ScaleEffect>().forEach((e) => e.removeFromParent());
-      _visualSprite?.add(
-        ScaleEffect.to(
-          Vector2.all(platformScale),
-          EffectController(duration: 0.1, curve: Curves.easeOut),
-        ),
-      );
-    }
-  }
-
   void _handleCollision(ObstacleComponent obstacle) {
     if (_hitGraceTimer > 0) return;
     gameState.takeHit();
     _hitGraceTimer = 1.0;
+
     _visualSprite?.add(
       ColorEffect(
         Colors.red,
@@ -407,5 +421,56 @@ class CarritoComponent extends PositionComponent
         opacityTo: 0.7,
       ),
     );
+  }
+
+  void _checkLanePenalty() {
+    bool isDesertTheme = (gameState.currentSection - 1) % 5 == 0;
+    bool isOffRoad = currentLane == 0 || currentLane == 4;
+
+    if (isDesertTheme && isOffRoad) {
+      gameState.setOffRoad(true);
+      if (_fuelPenaltyEffect == null && _visualSprite != null) {
+        _fuelPenaltyEffect = ColorEffect(
+          Colors.red,
+          EffectController(duration: 0.5, alternate: true, infinite: true),
+          opacityTo: 0.6,
+        );
+        _visualSprite!.add(_fuelPenaltyEffect!);
+      }
+    } else {
+      gameState.setOffRoad(false);
+      if (_fuelPenaltyEffect != null) {
+        _fuelPenaltyEffect!.removeFromParent();
+        _fuelPenaltyEffect = null;
+
+        if (_slowEffectVisual == null) {
+          _visualSprite?.paint.colorFilter = null;
+        }
+      }
+    }
+  }
+
+  void _applySlowDebuff() {
+    _slowDebuffTimer = 2.0;
+
+    if (_slowEffectVisual == null && _visualSprite != null) {
+      _slowEffectVisual = ColorEffect(
+        Colors.blue,
+        EffectController(duration: 0.5, alternate: true, infinite: true),
+        opacityTo: 0.6,
+      );
+      _visualSprite!.add(_slowEffectVisual!);
+    }
+  }
+
+  void _removeSlowVisuals() {
+    if (_slowEffectVisual != null) {
+      _slowEffectVisual!.removeFromParent();
+      _slowEffectVisual = null;
+
+      if (_fuelPenaltyEffect == null) {
+        _visualSprite?.paint.colorFilter = null;
+      }
+    }
   }
 }

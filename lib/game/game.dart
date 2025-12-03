@@ -113,9 +113,9 @@ class CarritoGame extends FlameGame
       'carrito_portrait.png',
       'coin.png',
       'fuel_canister.png',
-      'obstacle_jumpable.png',
-      'obstacle_nonjumpable.png',
       'explosion.png',
+      'puddle.png',
+      'barrier.png',
     ]);
 
     for (int i = 0; i < 5; i++) {
@@ -124,6 +124,8 @@ class CarritoGame extends FlameGame
         await images.load('road_portrait_$i.png');
         await images.load('borders_landscape_$i.png');
         await images.load('borders_portrait_$i.png');
+        await images.load('obstacle_jumpable_$i.png');
+        await images.load('obstacle_nonjumpable_$i.png');
       } catch (e) {
         debugPrint("Faltan imágenes para el tema $i");
       }
