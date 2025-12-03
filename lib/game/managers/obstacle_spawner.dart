@@ -1234,12 +1234,271 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
       ),
     ];
 
+    final volcanoPatterns = [
+      // 1. El Pasillo de la Suerte
+      // 3 Géiseres en línea en el centro (carril 2).
+      // Si tienes suerte están apagados. Si no, a esquivar a 1 o 3.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.8,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.geyser,
+            delayFromStart: 1.6,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.0),
+        ],
+        duration: 2.5,
+      ),
+
+      // 2. Muro con Puerta Aleatoria
+      // Géiseres en 1, 2, 3.
+      // Tienes que rezar para que uno esté apagado, o saltar el que creas más seguro.
+      // (Como el géiser activo cuenta como muro, no se puede saltar, así que es puro reflejo).
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [CoinSpawnInfo(lane: 2, delayFromStart: 0.5)],
+        duration: 1.5,
+      ),
+
+      // 3. Salto sobre Magma
+      // Géiser en 2, seguido de obstáculo saltable en 2.
+      // Si el géiser está prendido, tienes que esquivar y volver rápido al centro para saltar.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.8, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+
+      // 4. Zigzag Forzado por Fuego
+      // Géiser en 1, luego en 3, luego en 1.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.6,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.geyser,
+            delayFromStart: 1.2,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 2, delayFromStart: 1.2),
+        ],
+        duration: 2.0,
+      ),
+
+      // 5. La Trampa del Centro
+      // Muros fijos en 1 y 3. Centro (2) tiene un Géiser.
+      // Si el géiser se prende... ¡problema! (Debes ir a la lava 0/4 por un segundo o chocar).
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [CoinSpawnInfo(lane: 2, delayFromStart: 0.5)], // El cebo
+        duration: 1.5,
+      ),
+
+      // 6. Escalera al Infierno
+      // Saltables en 1, 2, 3 en escalera. Rodeados de géiseres.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.4,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.8,
+          ),
+          // Géiseres molestando
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ), // Debajo del primer salto
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.8, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+
+      // 7. Checkpoint de Fuego
+      // Dos filas de géiseres en 1 y 3. El 2 está libre pero con un muro al final.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 1.0,
+          ),
+        ],
+        coins: [CoinSpawnInfo(lane: 1, delayFromStart: 0.5)],
+        duration: 2.0,
+      ),
+
+      // 8. El Muro Volcánico
+      // Muros en 1 y 2. Géiser en 3.
+      // Si el géiser está ON, los 3 carriles centrales están cerrados -> Lava obligatoria.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 4, delayFromStart: 0.0),
+        ], // Recompensa en lava
+        duration: 1.5,
+      ),
+
+      // 9. Lluvia de Magma
+      // Géiseres apareciendo en secuencia rápida 1 -> 2 -> 3.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.4,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.geyser,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [CoinSpawnInfo(lane: 2, delayFromStart: 0.0)],
+        duration: 2.0,
+      ),
+
+      // 10. Salto Doble con Riesgo
+      // Saltable en 2. Aterrizas... y hay un Géiser en 2.
+      // Debes saltar y moverte en el aire si ves el fuego.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.geyser,
+            delayFromStart: 1.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+    ];
+
     _patternsByTheme = {
       0: basePatterns,
       1: cityPatterns,
       2: forestPatterns,
       3: icePatterns,
-      4: basePatterns,
+      4: volcanoPatterns,
     };
   }
 

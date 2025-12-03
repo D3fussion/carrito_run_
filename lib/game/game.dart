@@ -122,6 +122,8 @@ class CarritoGame extends FlameGame
       'barrier.png',
       'fog.png',
       'snowball.png',
+      'geyser_active.png',
+      'geyser_inactive.png',
     ]);
 
     for (int i = 0; i < 5; i++) {

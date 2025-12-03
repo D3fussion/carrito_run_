@@ -50,10 +50,11 @@ class CarritoComponent extends PositionComponent
   final double dragThreshold = 10.0;
   Vector2 _basePosition = Vector2.zero();
 
-  // -- Variables de la seccion de hielo
-  double _iceCampingTimer = 0.0; // Tiempo lógico (0 a 2.0s)
+  double _iceCampingTimer = 0.0;
   double _currentIceTintIntensity = 0.0;
   final double _maxIceTime = 2.0;
+
+  double _lavaDamageTimer = 0.0;
 
   double get laneChangeDuration {
     double baseDuration = 0.15 / game.gameState.speedMultiplier;
@@ -155,7 +156,6 @@ class CarritoComponent extends PositionComponent
       _jumpGraceTimer -= dt;
       if (_jumpGraceTimer <= 0) _platformToIgnore = null;
     }
-
     if (_hitGraceTimer > 0) _hitGraceTimer -= dt;
 
     if (_slowDebuffTimer > 0) {
@@ -166,30 +166,16 @@ class CarritoComponent extends PositionComponent
       }
     }
 
-    bool isIceSection = (gameState.currentSection - 1) % 5 == 3;
+    bool isPenaltyActive = gameState.isOffRoad;
+    bool isVolcano = (gameState.currentSection - 1) % 5 == 4;
 
-    if (isIceSection && !_hasExploded) {
-      if (!_isMoving) {
-        _iceCampingTimer += dt;
-      } else {
-        _iceCampingTimer = 0.0;
-      }
-
-      if (_iceCampingTimer >= _maxIceTime) {
-        debugPrint("¡CONGELADO! Daño recibido.");
-        gameState.takeHit(); // Daño (-30%)
-        _iceCampingTimer = 0.0; // Reseteamos lógica
-
-        _visualSprite?.add(
-          ColorEffect(
-            Colors.red,
-            EffectController(duration: 0.2, alternate: true, repeatCount: 2),
-            opacityTo: 0.8,
-          ),
-        );
+    if (isVolcano && isPenaltyActive && !_hasExploded) {
+      _lavaDamageTimer += dt;
+      if (_lavaDamageTimer >= 0.1) {
+        _lavaDamageTimer = 0.0;
       }
     } else {
-      _iceCampingTimer = 0.0;
+      _lavaDamageTimer = 0.0;
     }
 
     _updateIceVisuals(dt);
@@ -382,7 +368,6 @@ class CarritoComponent extends PositionComponent
       other.removeFromParent();
       return;
     }
-
     if (other is FuelCanisterComponent) {
       gameState.collectFuelCanister();
       other.removeFromParent();
@@ -402,7 +387,18 @@ class CarritoComponent extends PositionComponent
         return;
       }
 
-      if (other.type == ObstacleType.jumpable) {
+      if (other.type == ObstacleType.geyser) {
+        if (other.isGeyserActive) {
+          _handleCollision(other);
+        }
+        return;
+      }
+
+      bool isMountable =
+          other.type == ObstacleType.jumpable ||
+          other.type == ObstacleType.snowball;
+
+      if (isMountable) {
         if (_jumpGraceTimer > 0 && other == _platformToIgnore) return;
 
         if (_isJumping) {
@@ -426,10 +422,20 @@ class CarritoComponent extends PositionComponent
   @override
   void onCollisionEnd(PositionComponent other) {
     super.onCollisionEnd(other);
-    if (other is ObstacleComponent && other.type == ObstacleType.jumpable) {
+
+    bool isMountable = false;
+    if (other is ObstacleComponent) {
+      isMountable =
+          other.type == ObstacleType.jumpable ||
+          other.type == ObstacleType.snowball;
+    }
+
+    if (isMountable) {
       _platformsInContact.remove(other);
+
       if (_platformsInContact.isEmpty && _isOnObstacle) {
         _isOnObstacle = false;
+
         if (!_isJumping) {
           _visualSprite?.add(
             ScaleEffect.to(
@@ -457,26 +463,34 @@ class CarritoComponent extends PositionComponent
   }
 
   void _checkLanePenalty() {
-    bool isDesertTheme = (gameState.currentSection - 1) % 5 == 0;
+    int sectionTheme = (gameState.currentSection - 1) % 5;
+
     bool isOffRoad = currentLane == 0 || currentLane == 4;
 
-    if (isDesertTheme && isOffRoad) {
+    bool isDesert = sectionTheme == 0; // Tema 0
+    bool isVolcano = sectionTheme == 4; // Tema 4
+
+    if ((isDesert || isVolcano) && isOffRoad) {
       gameState.setOffRoad(true);
+
+      Color penaltyColor = isVolcano ? Colors.deepOrange : Colors.red;
+
       if (_fuelPenaltyEffect == null && _visualSprite != null) {
         _fuelPenaltyEffect = ColorEffect(
-          Colors.red,
-          EffectController(duration: 0.5, alternate: true, infinite: true),
-          opacityTo: 0.6,
+          penaltyColor,
+          EffectController(duration: 0.2, alternate: true, infinite: true),
+          opacityTo: 0.8,
         );
         _visualSprite!.add(_fuelPenaltyEffect!);
       }
     } else {
       gameState.setOffRoad(false);
+
       if (_fuelPenaltyEffect != null) {
         _fuelPenaltyEffect!.removeFromParent();
         _fuelPenaltyEffect = null;
 
-        if (_slowEffectVisual == null) {
+        if (_slowEffectVisual == null && _currentIceTintIntensity < 0.01) {
           _visualSprite?.paint.colorFilter = null;
         }
       }

@@ -8,6 +8,7 @@ enum ObstacleType {
   puddle, // Charco (Piso, efecto slow) <--- NUEVO
   barrier, // Valla (Saltable o No, definiremos como No Saltable o Alto)
   snowball, // Bola de nieve
+  geyser, // Geiser de fuego (Dos estados, prendido y apagado)
 }
 
 class ObstacleComponent extends SpriteComponent
@@ -16,6 +17,13 @@ class ObstacleComponent extends SpriteComponent
   final int lane;
   final ObstacleType type;
   final int theme;
+
+  bool isGeyserActive = false;
+  double _geyserTimer = 0.0;
+  final double _geyserCycleDuration = 2.0;
+
+  Sprite? _geyserActiveSprite;
+  Sprite? _geyserInactiveSprite;
 
   ObstacleComponent({
     required this.isLandscape,
@@ -30,26 +38,49 @@ class ObstacleComponent extends SpriteComponent
 
     String spriteName;
 
-    switch (type) {
-      case ObstacleType.jumpable:
-        spriteName = 'obstacle_jumpable_$theme.png';
-        break;
+    if (type == ObstacleType.geyser) {
+      _geyserActiveSprite = await game.loadSprite('geyser_active.png');
+      _geyserInactiveSprite = await game.loadSprite('geyser_inactive.png');
 
-      case ObstacleType.nonJumpable:
-        spriteName = 'obstacle_nonjumpable_$theme.png';
-        break;
+      _geyserTimer =
+          (DateTime.now().millisecondsSinceEpoch % 2000) /
+          1000.0 *
+          _geyserCycleDuration;
 
-      case ObstacleType.puddle:
-        spriteName = 'puddle.png';
-        break;
+      if (_geyserTimer > _geyserCycleDuration / 2) {
+        sprite = _geyserActiveSprite;
+        isGeyserActive = true;
+      } else {
+        sprite = _geyserInactiveSprite;
+        isGeyserActive = false;
+      }
+      spriteName = 'geyser_active.png';
+    } else {
+      switch (type) {
+        case ObstacleType.jumpable:
+          spriteName = 'obstacle_jumpable_$theme.png';
+          break;
 
-      case ObstacleType.barrier:
-        spriteName = 'barrier.png';
-        break;
+        case ObstacleType.nonJumpable:
+          spriteName = 'obstacle_nonjumpable_$theme.png';
+          break;
 
-      case ObstacleType.snowball:
-        spriteName = 'snowball.png';
-        break;
+        case ObstacleType.puddle:
+          spriteName = 'puddle.png';
+          break;
+
+        case ObstacleType.barrier:
+          spriteName = 'barrier.png';
+          break;
+
+        case ObstacleType.snowball:
+          spriteName = 'snowball.png';
+          break;
+
+        case ObstacleType.geyser:
+          spriteName = 'obstacle_nonjumpable_$theme.png';
+          break;
+      }
     }
 
     try {
@@ -121,6 +152,26 @@ class ObstacleComponent extends SpriteComponent
     } else {
       position.y += moveSpeed * dt;
       if (position.y > game.size.y + size.y) removeFromParent();
+    }
+
+    if (type == ObstacleType.geyser) {
+      _geyserTimer += dt;
+
+      if (_geyserTimer >= _geyserCycleDuration * 2) {
+        _geyserTimer = 0;
+      }
+
+      if (_geyserTimer < _geyserCycleDuration) {
+        if (!isGeyserActive) {
+          isGeyserActive = true;
+          sprite = _geyserActiveSprite;
+        }
+      } else {
+        if (isGeyserActive) {
+          isGeyserActive = false;
+          sprite = _geyserInactiveSprite;
+        }
+      }
     }
   }
 }

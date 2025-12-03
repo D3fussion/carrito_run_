@@ -86,6 +86,9 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
 
     final gameState = Provider.of<GameState>(context, listen: false);
+
+    gameState.loadData();
+
     game = CarritoGame(gameState: gameState);
   }
 

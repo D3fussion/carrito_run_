@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GameState extends ChangeNotifier {
   // --- VARIABLES ---
@@ -12,7 +13,9 @@ class GameState extends ChangeNotifier {
   // Estado del Juego
   bool _isPlaying = false;
   bool _isGameOver = false;
-  bool _isOffRoad = false; // Para el desierto
+  bool _isOffRoad = false; // Para el desierto y el volcan
+
+  bool get isOffRoad => _isOffRoad;
 
   // Sistema de Gasolina
   double _fuel = 100.0;
@@ -29,14 +32,15 @@ class GameState extends ChangeNotifier {
   final int _gasStationInterval = 60;
 
   // Costo de Gasolina
-  int _refuelCost = 10;
-  final int _baseCost = 10;
-  final double _costMultiplier = 1.5;
+  int _refuelCost = 15;
 
   // Velocidad
   final double _baseSpeed = 400.0;
   final double _maxSpeed = 1000.0;
   final int _maxSpeedSection = 11;
+
+  //Monedas Globales (Cartera)
+  int _totalWalletCoins = 0;
 
   // --- GETTERS ---
   int get coins => _coins;
@@ -52,6 +56,7 @@ class GameState extends ChangeNotifier {
   bool get isGameOver => _isGameOver;
   int get nextGasStationScore => _nextGasStationScore;
   int get scoreUntilNextGasStation => _nextGasStationScore - _internalScore;
+  int get totalWalletCoins => _totalWalletCoins;
 
   double get currentSpeed {
     if (_currentSection >= _maxSpeedSection) return _maxSpeed;
@@ -83,10 +88,6 @@ class GameState extends ChangeNotifier {
 
   void advanceToNextLevel() {
     _currentSection++;
-    _refuelCost = (_baseCost * (_costMultiplier * (_currentSection - 1)))
-        .toInt();
-    if (_refuelCost < _baseCost) _refuelCost = _baseCost;
-    _safeNotifyListeners();
   }
 
   void addCoin() {
@@ -128,8 +129,10 @@ class GameState extends ChangeNotifier {
 
       // Lógica Desierto (Sección 1, 6, 11...)
       bool isDesertSection = (_currentSection - 1) % 5 == 0;
-      if (isDesertSection && _isOffRoad) {
-        currentConsumption *= 3.0;
+      bool isVolcanoSection = (_currentSection - 1) % 5 == 4;
+      if (_isOffRoad) {
+        if (isDesertSection) currentConsumption *= 3.0;
+        if (isVolcanoSection) currentConsumption *= 10.0;
       }
 
       _fuel -= currentConsumption * dt;
@@ -145,9 +148,13 @@ class GameState extends ChangeNotifier {
 
   void _triggerGameOver() {
     _isGameOver = true;
-    // OJO: NO hacemos setPlaying(false) aquí todavía.
-    // Dejamos que el Game Loop detecte el game over, haga la explosión
-    // y luego él mismo detenga el juego.
+    if (_coins > 0) {
+      _totalWalletCoins += _coins;
+      _saveData(); // Guardamos en disco inmediatamente
+      debugPrint(
+        "💰 Se agregaron $_coins a la cartera. Total: $_totalWalletCoins",
+      );
+    }
   }
 
   bool canRefuel() {
@@ -170,7 +177,7 @@ class GameState extends ChangeNotifier {
     _fuel = _maxFuel;
     _currentSection = 1;
     _nextGasStationScore = _firstGasStation;
-    _refuelCost = _baseCost;
+    _refuelCost = 15;
     _isGameOver = false; // Reseteamos bandera de muerte
     _isOffRoad = false;
     _isPlaying = false;
@@ -192,5 +199,17 @@ class GameState extends ChangeNotifier {
   void debugFillFuel() {
     _fuel = _maxFuel;
     _safeNotifyListeners();
+  }
+
+  Future<void> loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Leemos la clave 'wallet_coins', si no existe (primera vez), es 0
+    _totalWalletCoins = prefs.getInt('wallet_coins') ?? 0;
+    _safeNotifyListeners();
+  }
+
+  Future<void> _saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('wallet_coins', _totalWalletCoins);
   }
 }
