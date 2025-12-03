@@ -1,11 +1,11 @@
-import 'package:carrito_run/game/components/fuel_canister_component.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 
 import 'package:carrito_run/game/components/carrito_component.dart';
 import 'package:carrito_run/game/components/coin_component.dart';
+import 'package:carrito_run/game/components/fuel_canister_component.dart';
 import 'package:carrito_run/game/components/gas_station_component.dart';
 import 'package:carrito_run/game/components/obstacle_component.dart';
 import 'package:carrito_run/game/managers/background_manager.dart';
@@ -28,6 +28,9 @@ class CarritoGame extends FlameGame
   bool _isPlaying = false;
   bool _waitingForGasStation = false;
   bool _imagesPreloaded = false;
+
+  bool _gameOverTriggered = false;
+
   int _currentTheme = 0;
 
   bool _hasDragged = false;
@@ -51,6 +54,7 @@ class CarritoGame extends FlameGame
 
   void startGame() {
     _isPlaying = true;
+    _gameOverTriggered = false;
     gameState.setPlaying(true);
 
     _updateCarrito();
@@ -60,6 +64,7 @@ class CarritoGame extends FlameGame
 
   void resetGame() {
     _isPlaying = false;
+    _gameOverTriggered = false;
     gameState.setPlaying(false);
 
     removeAll(children);
@@ -75,6 +80,27 @@ class CarritoGame extends FlameGame
     _backgroundManager.loadInitialTheme(0);
 
     pauseEngine();
+
+    overlays.add('StartScreen');
+  }
+
+  void restartInstant() {
+    _isPlaying = false;
+    _gameOverTriggered = false;
+
+    removeAll(children);
+    _carrito = null;
+    _obstacleSpawner = null;
+    _currentTheme = 0;
+    _waitingForGasStation = false;
+
+    gameState.reset();
+
+    _backgroundManager = BackgroundManager();
+    add(_backgroundManager);
+    _backgroundManager.loadInitialTheme(0);
+
+    startGame();
   }
 
   Future<void> _preloadImages() async {
@@ -86,9 +112,10 @@ class CarritoGame extends FlameGame
       'carrito_landscape.png',
       'carrito_portrait.png',
       'coin.png',
+      'fuel_canister.png',
       'obstacle_jumpable.png',
       'obstacle_nonjumpable.png',
-      'fuel_canister.png',
+      'explosion.png',
     ]);
 
     for (int i = 0; i < 5; i++) {
@@ -98,10 +125,9 @@ class CarritoGame extends FlameGame
         await images.load('borders_landscape_$i.png');
         await images.load('borders_portrait_$i.png');
       } catch (e) {
-        debugPrint("Advertencia: Faltan imágenes para el tema $i");
+        debugPrint("Faltan imágenes para el tema $i");
       }
     }
-
     _imagesPreloaded = true;
   }
 
@@ -117,13 +143,20 @@ class CarritoGame extends FlameGame
 
     gameState.updateTime(dt);
 
+    if (gameState.isGameOver && !_gameOverTriggered) {
+      _gameOverTriggered = true;
+      debugPrint("GAME OVER DETECTADO EN GAME.DART");
+
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        pauseEngine();
+        overlays.add('GameOverOverlay');
+      });
+    }
+
     if (gameState.shouldSpawnGasStation() && !_waitingForGasStation) {
       _waitingForGasStation = true;
-
       _obstacleSpawner?.setPaused(true);
-
       gameState.markGasStationSpawned();
-
       _spawnGasStation();
     }
   }
@@ -141,14 +174,12 @@ class CarritoGame extends FlameGame
       },
       onPassCenter: () {
         gameState.advanceToNextLevel();
-
         _currentTheme = nextThemeIndex;
         _obstacleSpawner?.setTheme(_currentTheme);
       },
     );
 
     add(gasStation);
-
     _backgroundManager.startTransition(nextThemeIndex, gasStation);
   }
 
@@ -164,7 +195,6 @@ class CarritoGame extends FlameGame
 
     if (_isLandscape != isCurrentlyLandscape) {
       _isLandscape = isCurrentlyLandscape;
-
       if (_isPlaying) {
         _updateCarrito();
       }
@@ -178,17 +208,16 @@ class CarritoGame extends FlameGame
     children.whereType<ObstacleSpawner>().toList().forEach(
       (c) => c.removeFromParent(),
     );
-
     children.whereType<ObstacleComponent>().toList().forEach(
       (c) => c.removeFromParent(),
     );
     children.whereType<CoinComponent>().toList().forEach(
       (c) => c.removeFromParent(),
     );
-    children.whereType<GasStationComponent>().toList().forEach(
+    children.whereType<FuelCanisterComponent>().toList().forEach(
       (c) => c.removeFromParent(),
     );
-    children.whereType<FuelCanisterComponent>().toList().forEach(
+    children.whereType<GasStationComponent>().toList().forEach(
       (c) => c.removeFromParent(),
     );
 
@@ -243,23 +272,5 @@ class CarritoGame extends FlameGame
     if (!_hasDragged && _carrito != null) {
       _carrito!.jump();
     }
-  }
-
-  @override
-  KeyEventResult onKeyEvent(
-    KeyEvent event,
-    Set<LogicalKeyboardKey> keysPressed,
-  ) {
-    final isKeyDown = event is KeyDownEvent;
-
-    if (isKeyDown && keysPressed.contains(LogicalKeyboardKey.keyP)) {
-      if (_isPlaying) {
-        debugPrint("DEV CHEAT: Saltando nivel...");
-        gameState.advanceToNextLevel();
-        return KeyEventResult.handled;
-      }
-    }
-
-    return super.onKeyEvent(event, keysPressed);
   }
 }

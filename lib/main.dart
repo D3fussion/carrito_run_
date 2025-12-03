@@ -1,3 +1,4 @@
+import 'package:carrito_run/game/overlays/game_over_overlay.dart';
 import 'package:flutter/foundation.dart';
 import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/overlays/loading_screen.dart';
@@ -105,6 +106,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   PauseButton(game: game as CarritoGame),
               'RefuelOverlay': (context, game) =>
                   RefuelOverlay(game: game as CarritoGame),
+              'GameOverOverlay': (context, game) =>
+                  GameOverOverlay(game: game as CarritoGame),
             },
             initialActiveOverlays: const ['StartScreen'],
           ),

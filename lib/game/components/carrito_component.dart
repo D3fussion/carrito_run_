@@ -19,6 +19,11 @@ class CarritoComponent extends PositionComponent
   Effect? _jumpEffect;
 
   SpriteComponent? _visualSprite;
+  Sprite? _cachedExplosionSprite;
+
+  ObstacleComponent? _platformToIgnore;
+
+  bool _hasExploded = false;
 
   double get laneChangeDuration => 0.15 / game.gameState.speedMultiplier;
 
@@ -32,6 +37,8 @@ class CarritoComponent extends PositionComponent
 
   double _jumpGraceTimer = 0.0;
   double _hitGraceTimer = 0.0;
+
+  ColorEffect? _fuelPenaltyEffect;
 
   final double dragThreshold = 10.0;
   Vector2 _basePosition = Vector2.zero();
@@ -54,13 +61,23 @@ class CarritoComponent extends PositionComponent
       anchor: Anchor.center,
     );
 
+    try {
+      _cachedExplosionSprite = await game.loadSprite('explosion.png');
+    } catch (e) {
+      debugPrint("ERROR: No se encontró explosion.png");
+    }
+
     _updateSize();
     add(RectangleHitbox());
 
-    add(_visualSprite!);
+    if (_visualSprite != null) {
+      add(_visualSprite!);
+    }
 
     _updatePosition();
     _basePosition = position.clone();
+
+    _checkLanePenalty();
   }
 
   void _updateSize() {
@@ -72,7 +89,6 @@ class CarritoComponent extends PositionComponent
       final carritoWidth = gameSize.x * 0.15;
       size = Vector2(carritoWidth, carritoWidth * 2);
     }
-
     if (_visualSprite != null) {
       _visualSprite!.size = size;
       _visualSprite!.position = size / 2;
@@ -109,6 +125,7 @@ class CarritoComponent extends PositionComponent
   }
 
   void handleDrag(Vector2 delta) {
+    if (_hasExploded) return;
     if (_isMoving) return;
     if (isLandscape) {
       if (delta.y > dragThreshold)
@@ -127,48 +144,56 @@ class CarritoComponent extends PositionComponent
   void update(double dt) {
     super.update(dt);
 
-    if (_jumpGraceTimer > 0) _jumpGraceTimer -= dt;
+    if (gameState.isGameOver && !_hasExploded) {
+      _triggerExplosionVisuals();
+    }
+
+    if (_jumpGraceTimer > 0) {
+      _jumpGraceTimer -= dt;
+      if (_jumpGraceTimer <= 0) {
+        _platformToIgnore = null;
+      }
+    }
+
     if (_hitGraceTimer > 0) _hitGraceTimer -= dt;
   }
 
-  void jump() {
-    if (_isJumping) return;
+  void _triggerExplosionVisuals() {
+    if (_cachedExplosionSprite == null) return;
 
-    _isJumping = true;
-    _jumpGraceTimer = 0.2;
+    _hasExploded = true;
 
-    final startScale = _isOnObstacle ? platformScale : 1.0;
-    const endScale = 1.0;
+    _isMoving = false;
+    _isJumping = false;
+    _isOnObstacle = false;
 
-    if (_isOnObstacle) {
-      _isOnObstacle = false;
+    children.whereType<Effect>().forEach((e) => e.removeFromParent());
+
+    if (_visualSprite != null) {
+      _visualSprite!.sprite = _cachedExplosionSprite;
+
+      final gameSize = game.size;
+      final bigSquareSize = isLandscape ? gameSize.y * 0.8 : gameSize.x * 0.8;
+
+      size = Vector2.all(bigSquareSize);
+      _visualSprite!.size = size;
+      _visualSprite!.position = size / 2;
+
+      _visualSprite!.add(
+        SequenceEffect([
+          ScaleEffect.by(Vector2.all(1.2), EffectController(duration: 0.1)),
+          ScaleEffect.by(Vector2.all(1.0), EffectController(duration: 0.1)),
+        ]),
+      );
     }
 
-    _jumpEffect =
-        FunctionEffect<CarritoComponent>((target, progress) {
-            final currentBaseScale =
-                startScale + (endScale - startScale) * progress;
-            final jumpCurve = 4 * progress * (1 - progress);
-            final jumpImpulse = (jumpScale - 1.0) * jumpCurve;
-
-            _visualSprite?.scale = Vector2.all(currentBaseScale + jumpImpulse);
-          }, EffectController(duration: jumpDuration))
-          ..onComplete = () {
-            _isJumping = false;
-            _jumpEffect = null;
-
-            if (_isOnObstacle) {
-              _visualSprite?.scale = Vector2.all(platformScale);
-            } else {
-              _visualSprite?.scale = Vector2.all(1.0);
-            }
-          };
-
-    add(_jumpEffect!);
+    anchor = Anchor.center;
   }
 
   @override
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+    if (_hasExploded) return true;
+
     final isKeyDown = event is KeyDownEvent;
     if (!isKeyDown) return true;
     if (keysPressed.contains(LogicalKeyboardKey.space)) {
@@ -200,7 +225,32 @@ class CarritoComponent extends PositionComponent
     final newLane = currentLane + direction;
     if (newLane >= 0 && newLane < totalLanes) {
       currentLane = newLane;
+      _checkLanePenalty();
       _animateToLane();
+    }
+  }
+
+  void _checkLanePenalty() {
+    bool isDesertTheme = (gameState.currentSection - 1) % 5 == 0;
+    bool isOffRoad = currentLane == 0 || currentLane == 4;
+
+    if (isDesertTheme && isOffRoad) {
+      gameState.setOffRoad(true);
+      if (_fuelPenaltyEffect == null && _visualSprite != null) {
+        _fuelPenaltyEffect = ColorEffect(
+          Colors.red,
+          EffectController(duration: 0.5, alternate: true, infinite: true),
+          opacityTo: 0.6,
+        );
+        _visualSprite!.add(_fuelPenaltyEffect!);
+      }
+    } else {
+      gameState.setOffRoad(false);
+      if (_fuelPenaltyEffect != null) {
+        _fuelPenaltyEffect!.removeFromParent();
+        _fuelPenaltyEffect = null;
+        _visualSprite?.paint.colorFilter = null;
+      }
     }
   }
 
@@ -229,11 +279,52 @@ class CarritoComponent extends PositionComponent
     );
   }
 
+  void jump() {
+    if (_hasExploded) return;
+    if (_isJumping) return;
+
+    _isJumping = true;
+    _jumpGraceTimer = 0.2;
+
+    if (_isOnObstacle && _platformsInContact.isNotEmpty) {
+      _platformToIgnore = _platformsInContact.first;
+    } else {
+      _platformToIgnore = null;
+    }
+
+    final startScale = _isOnObstacle ? platformScale : 1.0;
+    const endScale = 1.0;
+
+    if (_isOnObstacle) {
+      _isOnObstacle = false;
+    }
+
+    _jumpEffect =
+        FunctionEffect<CarritoComponent>((target, progress) {
+            final currentBaseScale =
+                startScale + (endScale - startScale) * progress;
+            final jumpCurve = 4 * progress * (1 - progress);
+            final jumpImpulse = (jumpScale - 1.0) * jumpCurve;
+            _visualSprite?.scale = Vector2.all(currentBaseScale + jumpImpulse);
+          }, EffectController(duration: jumpDuration))
+          ..onComplete = () {
+            _isJumping = false;
+            _jumpEffect = null;
+            if (_isOnObstacle) {
+              _visualSprite?.scale = Vector2.all(platformScale);
+            } else {
+              _visualSprite?.scale = Vector2.all(1.0);
+            }
+          };
+    add(_jumpEffect!);
+  }
+
   @override
   void onCollisionStart(
     Set<Vector2> intersectionPoints,
     PositionComponent other,
   ) {
+    if (_hasExploded) return;
     super.onCollisionStart(intersectionPoints, other);
 
     if (other is CoinComponent) {
@@ -241,37 +332,32 @@ class CarritoComponent extends PositionComponent
       other.removeFromParent();
       return;
     }
-
     if (other is FuelCanisterComponent) {
-      debugPrint("¡Gasolina extra recogida!");
       gameState.collectFuelCanister();
       other.removeFromParent();
-
-      _visualSprite?.add(
-        ColorEffect(
-          Colors.green,
-          EffectController(duration: 0.2, alternate: true, repeatCount: 2),
-          opacityTo: 0.7,
-        ),
-      );
       return;
     }
 
     if (other is ObstacleComponent) {
       if (other.type == ObstacleType.jumpable) {
-        if (_jumpGraceTimer > 0) return;
+        bool isTakingOff = _jumpGraceTimer > 0 && other == _platformToIgnore;
 
+        if (isTakingOff) {
+          return; 
+        }
         if (_isJumping) {
           _platformsInContact.add(other);
           _isOnObstacle = true;
           _stopJumpEffect();
           return;
-        } else if (_isOnObstacle) {
+        } else if (_isOnObstacle && _platformsInContact.isNotEmpty) {
           _platformsInContact.add(other);
+          return;
+        } else {
+          _handleCollision(other);
           return;
         }
       }
-
       _handleCollision(other);
     }
   }
@@ -279,13 +365,10 @@ class CarritoComponent extends PositionComponent
   @override
   void onCollisionEnd(PositionComponent other) {
     super.onCollisionEnd(other);
-
     if (other is ObstacleComponent && other.type == ObstacleType.jumpable) {
       _platformsInContact.remove(other);
-
       if (_platformsInContact.isEmpty && _isOnObstacle) {
         _isOnObstacle = false;
-
         if (!_isJumping) {
           _visualSprite?.add(
             ScaleEffect.to(
@@ -303,9 +386,7 @@ class CarritoComponent extends PositionComponent
       _jumpEffect!.removeFromParent();
       _jumpEffect = null;
       _isJumping = false;
-
       children.whereType<ScaleEffect>().forEach((e) => e.removeFromParent());
-
       _visualSprite?.add(
         ScaleEffect.to(
           Vector2.all(platformScale),
@@ -317,13 +398,8 @@ class CarritoComponent extends PositionComponent
 
   void _handleCollision(ObstacleComponent obstacle) {
     if (_hitGraceTimer > 0) return;
-
-    debugPrint('¡GOLPE! Perdiendo combustible...');
-
     gameState.takeHit();
-
     _hitGraceTimer = 1.0;
-
     _visualSprite?.add(
       ColorEffect(
         Colors.red,

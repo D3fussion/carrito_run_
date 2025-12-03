@@ -18,10 +18,8 @@ class FuelCanisterComponent extends SpriteComponent
   Future<void> onLoad() async {
     await super.onLoad();
 
-    // Asegúrate de tener esta imagen en assets
     sprite = await game.loadSprite('fuel_canister.png');
 
-    // Prioridad igual a las monedas
     priority = isOnObstacle ? 8 : 5;
 
     _updateSize();
@@ -33,10 +31,9 @@ class FuelCanisterComponent extends SpriteComponent
 
   void _updateSize() {
     final gameSize = game.size;
-    // Hacemos el bidón ligeramente más grande que la moneda para que destaque
     if (isLandscape) {
       final laneHeight = gameSize.y / 5;
-      final itemSize = laneHeight * 0.6; // 0.6 en vez de 0.5
+      final itemSize = laneHeight * 0.6;
       size = Vector2.all(itemSize);
     } else {
       final laneWidth = gameSize.x / 5;

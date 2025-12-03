@@ -2,44 +2,56 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
 class GameState extends ChangeNotifier {
+  // --- VARIABLES ---
   int _coins = 0;
-  int _displayScore = 0; // Puntaje que ve el jugador
-  int _internalScore = 0; // Puntaje secreto para gasolineras/powerups
+  int _displayScore = 0;
+  int _internalScore = 0;
   double _timeElapsed = 0.0;
-  final double _displayScoreMultiplier =
-      10.0; // Multiplicador del puntaje visible
+  final double _displayScoreMultiplier = 10.0;
 
-  // Saber si esta jugando o no
+  // Estado del Juego
   bool _isPlaying = false;
-  bool get isPlaying => _isPlaying;
+  bool _isGameOver = false;
+  bool _isOffRoad = false; // Para el desierto
 
-  // Daño por golpe (30% del total)
-  final double _collisionDamage = 30.0;
-
-  // Sistema de gasolina
+  // Sistema de Gasolina
   double _fuel = 100.0;
   final double _maxFuel = 100.0;
+  // Consumo ajustado para que dure la sección + margen
   final double _fuelConsumptionRate = 1.15;
+  final double _collisionDamage = 30.0;
+  final double _smallFuelRecovery = 15.0;
 
-  // Sistema de secciones basado en puntaje interno
+  // Sistema de Secciones
   int _currentSection = 1;
-  int _nextGasStationScore = 50; // Primera gasolinera a los 50 puntos
+  int _nextGasStationScore = 50;
   final int _firstGasStation = 50;
-  final int _gasStationInterval =
-      60; // Cada 60 puntos adicionales después de la primera
+  final int _gasStationInterval = 60;
 
-  // Costo de gasolina
+  // Costo de Gasolina
   int _refuelCost = 10;
   final int _baseCost = 10;
   final double _costMultiplier = 1.5;
 
-  // Valor de recuperación del bidón pequeño
-  final double _smallFuelRecovery = 15.0;
+  // Velocidad
+  final double _baseSpeed = 400.0;
+  final double _maxSpeed = 1000.0;
+  final int _maxSpeedSection = 11;
 
-  // Velocidad del juego
-  final double _baseSpeed = 400.0; // Velocidad inicial (Sección 1)
-  final double _maxSpeed = 1000.0; // Velocidad máxima (Sección 11 en adelante)
-  final int _maxSpeedSection = 11; // Nivel donde se alcanza el máximo
+  // --- GETTERS ---
+  int get coins => _coins;
+  int get score => _displayScore;
+  int get internalScore => _internalScore;
+  double get timeElapsed => _timeElapsed;
+  double get fuel => _fuel;
+  double get maxFuel => _maxFuel;
+  int get currentSection => _currentSection;
+  int get refuelCost => _refuelCost;
+  bool get isOutOfFuel => _fuel <= 0;
+  bool get isPlaying => _isPlaying;
+  bool get isGameOver => _isGameOver;
+  int get nextGasStationScore => _nextGasStationScore;
+  int get scoreUntilNextGasStation => _nextGasStationScore - _internalScore;
 
   double get currentSpeed {
     if (_currentSection >= _maxSpeedSection) return _maxSpeed;
@@ -47,18 +59,18 @@ class GameState extends ChangeNotifier {
     return _baseSpeed + ((_maxSpeed - _baseSpeed) * progress);
   }
 
-  int get coins => _coins;
-  int get score => _displayScore; // El jugador ve este puntaje
-  int get internalScore => _internalScore; // Puntaje secreto
-  double get timeElapsed => _timeElapsed;
-  double get fuel => _fuel;
-  double get maxFuel => _maxFuel;
-  int get currentSection => _currentSection;
-  int get refuelCost => _refuelCost;
-  bool get isOutOfFuel => _fuel <= 0;
-  int get nextGasStationScore => _nextGasStationScore;
-  int get scoreUntilNextGasStation => _nextGasStationScore - _internalScore;
   double get speedMultiplier => currentSpeed / _baseSpeed;
+
+  // --- MÉTODOS ---
+
+  void setPlaying(bool playing) {
+    _isPlaying = playing;
+    _safeNotifyListeners();
+  }
+
+  void setOffRoad(bool isOffRoad) {
+    _isOffRoad = isOffRoad;
+  }
 
   bool shouldSpawnGasStation() {
     return _internalScore >= _nextGasStationScore;
@@ -71,11 +83,9 @@ class GameState extends ChangeNotifier {
 
   void advanceToNextLevel() {
     _currentSection++;
-
     _refuelCost = (_baseCost * (_costMultiplier * (_currentSection - 1)))
         .toInt();
     if (_refuelCost < _baseCost) _refuelCost = _baseCost;
-
     _safeNotifyListeners();
   }
 
@@ -84,24 +94,60 @@ class GameState extends ChangeNotifier {
     _safeNotifyListeners();
   }
 
-  void addScore(int points) {
-    _displayScore += points;
-    _safeNotifyListeners();
+  void collectFuelCanister() {
+    if (_fuel < _maxFuel) {
+      _fuel += _smallFuelRecovery;
+      if (_fuel > _maxFuel) _fuel = _maxFuel;
+      _safeNotifyListeners();
+    }
+  }
+
+  void takeHit() {
+    if (_fuel > 0 && !_isGameOver) {
+      _fuel -= _collisionDamage;
+
+      if (_fuel <= 0) {
+        _fuel = 0;
+        _triggerGameOver();
+      }
+
+      _safeNotifyListeners();
+    }
   }
 
   void updateTime(double dt) {
+    // Si ya es Game Over, no hacemos nada más
+    if (_isGameOver) return;
+
     _timeElapsed += dt;
-
     _internalScore = _timeElapsed.floor();
-
     _displayScore = (_timeElapsed * _displayScoreMultiplier).toInt();
 
     if (_fuel > 0) {
-      _fuel -= _fuelConsumptionRate * dt;
-      if (_fuel < 0) _fuel = 0;
+      double currentConsumption = _fuelConsumptionRate;
+
+      // Lógica Desierto (Sección 1, 6, 11...)
+      bool isDesertSection = (_currentSection - 1) % 5 == 0;
+      if (isDesertSection && _isOffRoad) {
+        currentConsumption *= 3.0;
+      }
+
+      _fuel -= currentConsumption * dt;
+
+      if (_fuel <= 0) {
+        _fuel = 0;
+        _triggerGameOver();
+      }
     }
 
     _safeNotifyListeners();
+  }
+
+  void _triggerGameOver() {
+    _isGameOver = true;
+    // OJO: NO hacemos setPlaying(false) aquí todavía.
+    // Dejamos que el Game Loop detecte el game over, haga la explosión
+    // y luego él mismo detenga el juego.
   }
 
   bool canRefuel() {
@@ -117,24 +163,18 @@ class GameState extends ChangeNotifier {
   }
 
   void reset() {
-    _isPlaying = false;
     _coins = 0;
     _displayScore = 0;
     _internalScore = 0;
     _timeElapsed = 0.0;
-    _fuel = 100.0;
+    _fuel = _maxFuel;
     _currentSection = 1;
     _nextGasStationScore = _firstGasStation;
     _refuelCost = _baseCost;
+    _isGameOver = false; // Reseteamos bandera de muerte
+    _isOffRoad = false;
+    _isPlaying = false;
     _safeNotifyListeners();
-  }
-
-  void takeHit() {
-    if (_fuel > 0) {
-      _fuel -= _collisionDamage;
-      if (_fuel < 0) _fuel = 0;
-      _safeNotifyListeners();
-    }
   }
 
   void _safeNotifyListeners() {
@@ -145,19 +185,6 @@ class GameState extends ChangeNotifier {
       });
     } else {
       notifyListeners();
-    }
-  }
-
-  void setPlaying(bool playing) {
-    _isPlaying = playing;
-    _safeNotifyListeners();
-  }
-
-  void collectFuelCanister() {
-    if (_fuel < _maxFuel) {
-      _fuel += _smallFuelRecovery;
-      if (_fuel > _maxFuel) _fuel = _maxFuel;
-      _safeNotifyListeners();
     }
   }
 }
