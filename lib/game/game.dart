@@ -1,3 +1,6 @@
+import 'package:carrito_run/game/components/fog_component.dart';
+import 'package:carrito_run/game/managers/fog_spawner.dart';
+import 'package:flame/effects.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/events.dart';
@@ -11,6 +14,7 @@ import 'package:carrito_run/game/components/obstacle_component.dart';
 import 'package:carrito_run/game/managers/background_manager.dart';
 import 'package:carrito_run/game/managers/obstacle_spawner.dart';
 import 'package:carrito_run/game/states/game_state.dart';
+import 'package:flutter/services.dart';
 
 class CarritoGame extends FlameGame
     with
@@ -116,6 +120,7 @@ class CarritoGame extends FlameGame
       'explosion.png',
       'puddle.png',
       'barrier.png',
+      'fog.png',
     ]);
 
     for (int i = 0; i < 5; i++) {
@@ -222,6 +227,12 @@ class CarritoGame extends FlameGame
     children.whereType<GasStationComponent>().toList().forEach(
       (c) => c.removeFromParent(),
     );
+    children.whereType<FogSpawner>().toList().forEach(
+      (c) => c.removeFromParent(),
+    );
+    children.whereType<FogComponent>().toList().forEach(
+      (c) => c.removeFromParent(),
+    );
 
     await Future.delayed(Duration.zero);
 
@@ -238,6 +249,8 @@ class CarritoGame extends FlameGame
     );
     _obstacleSpawner!.setTheme(_currentTheme);
     add(_obstacleSpawner!);
+
+    add(FogSpawner(isLandscape: _isLandscape));
   }
 
   @override
@@ -274,5 +287,42 @@ class CarritoGame extends FlameGame
     if (!_hasDragged && _carrito != null) {
       _carrito!.jump();
     }
+  }
+
+  @override
+  KeyEventResult onKeyEvent(
+    KeyEvent event,
+    Set<LogicalKeyboardKey> keysPressed,
+  ) {
+    final isKeyDown = event is KeyDownEvent;
+
+    // TRUCO 1: Saltar Nivel (Tecla P)
+    if (isKeyDown && keysPressed.contains(LogicalKeyboardKey.keyP)) {
+      if (_isPlaying) {
+        debugPrint("🔧 DEV CHEAT: Saltando nivel...");
+        gameState.advanceToNextLevel();
+        return KeyEventResult.handled;
+      }
+    }
+
+    // TRUCO 2: Rellenar Gasolina (Tecla F)
+    if (isKeyDown && keysPressed.contains(LogicalKeyboardKey.keyF)) {
+      if (_isPlaying && !gameState.isGameOver) {
+        debugPrint("🔧 DEV CHEAT: Gasolina rellenada al 100%");
+        gameState.debugFillFuel();
+
+        _carrito?.add(
+          ColorEffect(
+            Colors.green,
+            EffectController(duration: 0.2, alternate: true, repeatCount: 2),
+            opacityTo: 0.8,
+          ),
+        );
+
+        return KeyEventResult.handled;
+      }
+    }
+
+    return super.onKeyEvent(event, keysPressed);
   }
 }

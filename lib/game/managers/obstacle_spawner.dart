@@ -657,10 +657,314 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
       ),
     ];
 
+    final forestPatterns = [
+      // 1. El Sendero Oculto
+      // Bloquea todo menos el carril 2. Si la niebla tapa el centro, te asustas.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [CoinSpawnInfo(lane: 2, delayFromStart: 0.0)],
+        duration: 1.5,
+      ),
+
+      // 2. Troncos en la Oscuridad (Salto Doble)
+      // Dos filas de troncos saltables. Si la niebla pasa, no ves la segunda fila.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          // Segunda fila
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.8,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.8,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.4),
+        ], // Moneda en el hueco
+        duration: 2.0,
+      ),
+
+      // 3. El Zigzag Fantasma
+      // Obstáculos espaciados. La niebla se mueve lento, así que probablemente
+      // tape uno de los tres mientras te mueves.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.5,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 1.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 1, delayFromStart: 0.2),
+          CoinSpawnInfo(lane: 3, delayFromStart: 0.7),
+        ],
+        duration: 2.0,
+      ),
+
+      // 4. Muro de Árboles con Salida Lateral
+      // Centro bloqueado masivamente. Debes ir a los bordes.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 0, delayFromStart: 0.0),
+          CoinSpawnInfo(lane: 4, delayFromStart: 0.0),
+        ],
+        duration: 1.5,
+      ),
+
+      // 5. Salto de Fe en el Bosque
+      // Un solo tronco en el centro rodeado de árboles.
+      // Requiere precisión.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0, isOnObstacle: true),
+        ],
+        duration: 1.5,
+      ),
+
+      // 6. La Jaula
+      // Obstáculos en U. Te obliga a quedarte en el centro y esperar.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.5,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.5,
+          ),
+        ],
+        coins: [CoinSpawnInfo(lane: 2, delayFromStart: 0.5)],
+        duration: 2.0,
+      ),
+
+      // 7. Escalera de Troncos
+      // Si la niebla tapa la pantalla, no sabrás si el siguiente es tronco (saltar) o árbol (esquivar).
+      // Aquí todos son troncos para ser justos, pero asusta.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.3,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.6,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.9,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.jumpable,
+            delayFromStart: 1.2,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.6, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+
+      // 8. Bloqueo 4-1
+      // Solo un carril libre aleatorio (el 1 en este caso).
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [CoinSpawnInfo(lane: 1, delayFromStart: 0.0)],
+        duration: 1.5,
+      ),
+
+      // 9. Trampa de Niebla (Salto Retrasado)
+      // Tronco en carril 2, pero aparece TARDÍO (delay 1.0).
+      // Probablemente la niebla ya pasó y te lo revela de golpe.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 1.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 1.0, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+
+      // 10. El Bosque Cerrado
+      // Patrón denso. Árboles en 1 y 3, Troncos en 0, 2, 4.
+      // Requiere identificar rápidamente qué es saltable y qué no.
+      ObstaclePattern(
+        obstacles: [
+          ObstacleSpawnInfo(
+            lane: 1,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 3,
+            type: ObstacleType.nonJumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 0,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 2,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+          ObstacleSpawnInfo(
+            lane: 4,
+            type: ObstacleType.jumpable,
+            delayFromStart: 0.0,
+          ),
+        ],
+        coins: [
+          CoinSpawnInfo(lane: 2, delayFromStart: 0.0, isOnObstacle: true),
+        ],
+        duration: 2.0,
+      ),
+    ];
+
     _patternsByTheme = {
       0: basePatterns,
       1: cityPatterns,
-      2: basePatterns,
+      2: forestPatterns,
       3: basePatterns,
       4: basePatterns,
     };

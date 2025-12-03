@@ -187,4 +187,10 @@ class GameState extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // Recupera la gasolina al 100%
+  void debugFillFuel() {
+    _fuel = _maxFuel;
+    _safeNotifyListeners();
+  }
 }
