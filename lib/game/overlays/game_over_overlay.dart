@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:carrito_run/game/game.dart';
+import 'package:window_manager/window_manager.dart';
 
 class GameOverOverlay extends StatelessWidget {
   final CarritoGame game;
@@ -60,7 +62,13 @@ class GameOverOverlay extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ElevatedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
+                      if (!kIsWeb &&
+                          (defaultTargetPlatform == TargetPlatform.windows ||
+                              defaultTargetPlatform == TargetPlatform.macOS ||
+                              defaultTargetPlatform == TargetPlatform.linux)) {
+                        await windowManager.setResizable(true);
+                      }
                       game.overlays.remove('GameOverOverlay');
                       game.resetGame();
                     },

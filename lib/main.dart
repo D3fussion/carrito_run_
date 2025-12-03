@@ -1,23 +1,25 @@
-import 'package:carrito_run/game/overlays/game_over_overlay.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flame/game.dart';
+import 'package:flame/flame.dart';
+import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
+
 import 'package:carrito_run/game/game.dart';
-import 'package:carrito_run/game/overlays/loading_screen.dart';
-import 'package:carrito_run/game/overlays/refuel_overlay.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:carrito_run/game/overlays/start_screen.dart';
 import 'package:carrito_run/game/overlays/pause_menu.dart';
 import 'package:carrito_run/game/overlays/pause_button.dart';
-import 'package:flame/flame.dart';
-import 'package:flame/game.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:window_manager/window_manager.dart';
+import 'package:carrito_run/game/overlays/refuel_overlay.dart';
+import 'package:carrito_run/game/overlays/loading_screen.dart';
+import 'package:carrito_run/game/overlays/game_over_overlay.dart';
+import 'package:carrito_run/game/overlays/shop_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. CONFIGURACIÓN PARA ESCRITORIO
+  // 1. CONFIGURACIÓN ESCRITORIO (Windows/Mac/Linux)
   if (!kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.windows ||
           defaultTargetPlatform == TargetPlatform.macOS ||
@@ -25,12 +27,13 @@ Future<void> main() async {
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(
-      size: Size(800, 600),
-      minimumSize: Size(400, 600),
+      size: Size(450, 800),
+      minimumSize: Size(350, 600),
       center: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.black,
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.normal,
+      title: "Cart Run",
     );
 
     windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -39,7 +42,7 @@ Future<void> main() async {
     });
   }
 
-  // 2. CONFIGURACIÓN PARA MÓVIL
+  // 2. CONFIGURACIÓN MÓVIL (Android/iOS)
   if (!kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS)) {
@@ -51,7 +54,9 @@ Future<void> main() async {
     await Flame.device.fullScreen();
   }
 
-  runApp(ChangeNotifierProvider(create: (_) => GameState(), child: MyApp()));
+  runApp(
+    ChangeNotifierProvider(create: (_) => GameState(), child: const MyApp()),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -61,18 +66,19 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Cart Run',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+        fontFamily: 'Arial',
       ),
-      home: const MyHomePage(title: 'Cart Run'),
+      home: const MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+  const MyHomePage({super.key});
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -86,7 +92,6 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
 
     final gameState = Provider.of<GameState>(context, listen: false);
-
     gameState.loadData();
 
     game = CarritoGame(gameState: gameState);
@@ -103,6 +108,8 @@ class _MyHomePageState extends State<MyHomePage> {
             overlayBuilderMap: {
               'StartScreen': (context, game) =>
                   StartScreen(game: game as CarritoGame),
+              'ShopScreen': (context, game) =>
+                  ShopScreen(game: game as CarritoGame),
               'PauseMenu': (context, game) =>
                   PauseMenu(game: game as CarritoGame),
               'PauseButton': (context, game) =>
@@ -114,7 +121,8 @@ class _MyHomePageState extends State<MyHomePage> {
             },
             initialActiveOverlays: const ['StartScreen'],
           ),
-          Positioned(top: 40, left: 0, right: 0, child: _buildGameUI()),
+
+          Positioned.fill(child: _buildGameUI()),
         ],
       ),
     );
@@ -123,66 +131,75 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildGameUI() {
     return Consumer<GameState>(
       builder: (context, gameState, child) {
-        if (!gameState.isPlaying) {
+        if (!gameState.isPlaying || gameState.isGameOver) {
           return const SizedBox.shrink();
         }
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            final isLandscape =
-                MediaQuery.of(context).size.width >
-                MediaQuery.of(context).size.height;
+            final isLandscape = constraints.maxWidth > constraints.maxHeight;
 
-            if (isLandscape) {
-              return Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: EdgeInsets.only(right: 80),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildScoreDisplay(gameState.score),
-                      SizedBox(height: 10),
-                      _buildCoinCounter(gameState.coins),
-                      SizedBox(height: 10),
-                      _buildFuelMeter(gameState.fuel, gameState.maxFuel),
-                      SizedBox(height: 10),
-                      _buildSectionDisplay(
-                        gameState.currentSection,
-                        gameState.scoreUntilNextGasStation,
+            return Stack(
+              children: [
+                if (isLandscape)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 20, right: 80),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildScoreDisplay(gameState.score),
+                          const SizedBox(height: 10),
+                          _buildCoinCounter(gameState.coins),
+                          const SizedBox(height: 10),
+                          _buildFuelMeter(gameState.fuel, gameState.maxFuel),
+                          const SizedBox(height: 10),
+                          _buildSectionDisplay(
+                            gameState.currentSection,
+                            gameState.scoreUntilNextGasStation,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              );
-            } else {
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildScoreDisplay(gameState.score),
-                        _buildCoinCounter(gameState.coins),
-                      ],
                     ),
-                    SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
+                    child: Column(
                       children: [
-                        _buildFuelMeter(gameState.fuel, gameState.maxFuel),
-                        _buildSectionDisplay(
-                          gameState.currentSection,
-                          gameState.scoreUntilNextGasStation,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildScoreDisplay(gameState.score),
+                            _buildCoinCounter(gameState.coins),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildFuelMeter(gameState.fuel, gameState.maxFuel),
+                            _buildSectionDisplay(
+                              gameState.currentSection,
+                              gameState.scoreUntilNextGasStation,
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              );
-            }
+                  ),
+
+                if (gameState.currentCarHasActiveAbility)
+                  Positioned(
+                    bottom: 20,
+                    left: 0,
+                    right: 0,
+                    child: Center(child: _buildAbilityBar(gameState)),
+                  ),
+              ],
+            );
           },
         );
       },
@@ -191,22 +208,22 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget _buildScoreDisplay(int score) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.6),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.blue, width: 2),
+        border: Border.all(color: Colors.blueAccent, width: 2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.stars, color: Colors.blue, size: 28),
-          SizedBox(width: 8),
+          const Icon(Icons.stars, color: Colors.blueAccent, size: 24),
+          const SizedBox(width: 8),
           Text(
             '$score',
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -217,7 +234,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget _buildCoinCounter(int coins) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.6),
         borderRadius: BorderRadius.circular(20),
@@ -226,13 +243,13 @@ class _MyHomePageState extends State<MyHomePage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.monetization_on, color: Colors.amber, size: 28),
-          SizedBox(width: 8),
+          const Icon(Icons.monetization_on, color: Colors.amber, size: 24),
+          const SizedBox(width: 8),
           Text(
             '$coins',
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -242,7 +259,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildFuelMeter(double fuel, double maxFuel) {
-    final percentage = fuel / maxFuel;
+    final percentage = (fuel / maxFuel).clamp(0.0, 1.0);
     Color fuelColor;
 
     if (percentage > 0.5) {
@@ -254,7 +271,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.6),
         borderRadius: BorderRadius.circular(20),
@@ -263,8 +280,8 @@ class _MyHomePageState extends State<MyHomePage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.local_gas_station, color: fuelColor, size: 28),
-          SizedBox(width: 8),
+          Icon(Icons.local_gas_station, color: fuelColor, size: 24),
+          const SizedBox(width: 8),
           SizedBox(
             width: 80,
             child: LinearProgressIndicator(
@@ -282,40 +299,118 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget _buildSectionDisplay(int section, int pointsRemaining) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.6),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.purple, width: 2),
+        border: Border.all(color: Colors.purpleAccent, width: 2),
       ),
-      child: Column(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
+          const Icon(Icons.flag, color: Colors.purpleAccent, size: 24),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.flag, color: Colors.purple, size: 28),
-              SizedBox(width: 8),
               Text(
-                'Sección $section',
-                style: TextStyle(
+                'Sec. $section',
+                style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ],
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.local_gas_station, color: Colors.orange, size: 16),
-              SizedBox(width: 4),
               Text(
-                '-${pointsRemaining}',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                '-$pointsRemaining m',
+                style: const TextStyle(color: Colors.white70, fontSize: 10),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAbilityBar(GameState state) {
+    final double percentage = (state.abilityCharge / 100.0).clamp(0.0, 1.0);
+    final bool isReady = percentage >= 1.0;
+    final bool isActive = state.isAbilityActive;
+
+    Color barColor = Colors.cyan;
+    Color glowColor = Colors.transparent;
+    String label = "CARGANDO";
+
+    if (isActive) {
+      barColor = Colors.orangeAccent;
+      label = "¡ACTIVA!";
+    } else if (isReady) {
+      barColor = Colors.yellowAccent;
+      glowColor = Colors.yellow;
+      label = "LISTO (X)";
+    } else {
+      label = "${(percentage * 100).toInt()}%";
+    }
+
+    return Container(
+      width: 250,
+      height: 35,
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isReady ? Colors.white : Colors.grey,
+          width: 2,
+        ),
+        boxShadow: [
+          if (isReady || isActive)
+            BoxShadow(
+              color: glowColor.withOpacity(0.6),
+              blurRadius: 15,
+              spreadRadius: 2,
+            ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // 1. Barra de Progreso
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return Container(
+                width: constraints.maxWidth * percentage,
+                decoration: BoxDecoration(
+                  color: barColor,
+                  borderRadius: BorderRadius.circular(8),
+                  gradient: LinearGradient(
+                    colors: [barColor.withOpacity(0.5), barColor],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // 2. Texto Centrado
+          Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                shadows: const [Shadow(blurRadius: 2, color: Colors.black)],
+              ),
+            ),
+          ),
+
+          // 3. Icono
+          const Positioned(
+            right: 10,
+            top: 0,
+            bottom: 0,
+            child: Icon(Icons.flash_on, color: Colors.white70, size: 20),
           ),
         ],
       ),

@@ -1,7 +1,6 @@
 import 'package:carrito_run/game/components/fog_component.dart';
 import 'package:carrito_run/game/managers/fog_spawner.dart';
 import 'package:flame/effects.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -113,8 +112,6 @@ class CarritoGame extends FlameGame
     await images.loadAll([
       'gas_station_landscape.png',
       'gas_station_portrait.png',
-      'carrito_landscape.png',
-      'carrito_portrait.png',
       'coin.png',
       'fuel_canister.png',
       'explosion.png',
@@ -124,7 +121,19 @@ class CarritoGame extends FlameGame
       'snowball.png',
       'geyser_active.png',
       'geyser_inactive.png',
+      'missile.png',
     ]);
+
+    for (var car in gameState.allCars) {
+      try {
+        await images.load('carts/${car.assetPath}_landscape.png');
+        await images.load('carts/${car.assetPath}_portrait.png');
+      } catch (e) {
+        debugPrint(
+          "Faltan imágenes para el carro: ${car.name} (${car.assetPath})",
+        );
+      }
+    }
 
     for (int i = 0; i < 5; i++) {
       try {
@@ -261,6 +270,8 @@ class CarritoGame extends FlameGame
     if (!_isPlaying) return;
     _hasDragged = false;
     _panStartPosition = info.eventPosition.global;
+
+    _carrito?.onPanStart();
   }
 
   @override
@@ -324,6 +335,13 @@ class CarritoGame extends FlameGame
 
         return KeyEventResult.handled;
       }
+    }
+
+    // TRUCO 3: Desbloquear Todo (Tecla U)
+    if (isKeyDown && keysPressed.contains(LogicalKeyboardKey.keyU)) {
+      debugPrint("🔧 DEV CHEAT: ¡GARAJE DESBLOQUEADO!");
+      gameState.debugUnlockAllCars();
+      return KeyEventResult.handled;
     }
 
     return super.onKeyEvent(event, keysPressed);

@@ -70,8 +70,6 @@ class CoinComponent extends SpriteComponent
 
     final currentSpeed = game.gameState.currentSpeed;
 
-    print("Velocidad Actual: ${currentSpeed}");
-
     if (isLandscape) {
       position.x -= currentSpeed * dt;
 

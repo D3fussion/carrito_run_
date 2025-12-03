@@ -68,7 +68,6 @@ class StartScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 50),
-
                   // Botón JUGAR
                   SizedBox(
                     width: 200,
@@ -123,6 +122,35 @@ class StartScreen extends StatelessWidget {
                         'JUGAR',
                         style: TextStyle(
                           fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20), // Espacio
+                  // --- BOTÓN GARAJE ---
+                  SizedBox(
+                    width: 200,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // Cambiar overlay
+                        game.overlays.remove('StartScreen');
+                        game.overlays.add('ShopScreen');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueGrey,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 5,
+                      ),
+                      icon: const Icon(Icons.garage, color: Colors.white),
+                      label: const Text(
+                        'GARAJE',
+                        style: TextStyle(
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
