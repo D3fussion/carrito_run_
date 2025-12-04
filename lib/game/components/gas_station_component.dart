@@ -21,9 +21,25 @@ class GasStationComponent extends SpriteComponent with HasGameReference {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    sprite = await game.loadSprite(
-      isLandscape ? 'gas_station_landscape.png' : 'gas_station_portrait.png',
-    );
+    // ⭐ CORREGIDO: Rutas correctas con ui/
+    try {
+      sprite = await game.loadSprite(
+        isLandscape 
+          ? 'ui/gas_station_landscape.png' 
+          : 'ui/gas_station_portrait.png',
+      );
+    } catch (e) {
+      print('⚠️ Gasolinera no encontrada en ui/, intentando sin ui/');
+      try {
+        sprite = await game.loadSprite(
+          isLandscape 
+            ? 'gas_station_landscape.png' 
+            : 'gas_station_portrait.png',
+        );
+      } catch (e2) {
+        print('❌ Error cargando gasolinera: $e2');
+      }
+    }
 
     priority = 1;
     _updateSize();

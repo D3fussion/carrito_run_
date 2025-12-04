@@ -31,3 +31,7 @@ flutter:
     - assets/images/ui/
     - assets/cars/
     - assets/ui/
+    - assets/images/escenarios/desierto/
+    - assets/images/escenarios/ciudad/
+    - assets/images/escenarios/bosque/
+    - assets/images/escenarios/nieve/

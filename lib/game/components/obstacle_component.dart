@@ -2,8 +2,8 @@ import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 
 enum ObstacleType {
-  jumpable, // Se puede saltar sobre él
-  nonJumpable, // Hay que esquivarlo cambiando de carril
+  jumpable,
+  nonJumpable,
 }
 
 class ObstacleComponent extends SpriteComponent
@@ -12,23 +12,37 @@ class ObstacleComponent extends SpriteComponent
   final int lane;
   final ObstacleType type;
   final double gameSpeed;
+  final String? customSprite; // ⭐ NUEVO
 
   ObstacleComponent({
     required this.isLandscape,
     required this.lane,
     required this.type,
     this.gameSpeed = 200.0,
+    this.customSprite, // ⭐ NUEVO
   });
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
-    sprite = await game.loadSprite(
-      type == ObstacleType.jumpable
-          ? 'obstacle_jumpable.png'
-          : 'obstacle_nonjumpable.png',
-    );
+    // ⭐ NUEVO: Usar sprite custom si existe, sino fallback a default
+    final spritePath = customSprite ??
+        (type == ObstacleType.jumpable
+            ? 'obstacle_jumpable.png'
+            : 'obstacle_nonjumpable.png');
+
+    try {
+      sprite = await game.loadSprite(spritePath);
+    } catch (e) {
+      print('⚠️ No se pudo cargar sprite: $spritePath, usando fallback');
+      // Fallback a sprites default
+      sprite = await game.loadSprite(
+        type == ObstacleType.jumpable
+            ? 'obstacle_jumpable.png'
+            : 'obstacle_nonjumpable.png',
+      );
+    }
 
     priority = 5;
 

@@ -1,6 +1,8 @@
 import 'package:carrito_run/game/components/coin_component.dart';
 import 'package:carrito_run/game/components/powerup_component.dart';
+import 'package:carrito_run/game/components/terrain_component.dart';
 import 'package:carrito_run/game/states/game_state.dart';
+import 'package:carrito_run/models/scenario_config.dart'; // ⭐ AGREGADO
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
@@ -33,10 +35,17 @@ class CarritoComponent extends PositionComponent
 
   final Set<ObstacleComponent> _platformsInContact = {};
 
+  // ⭐ NUEVO: Terrenos en contacto
+  final Set<TerrainComponent> _terrainsInContact = {};
+
   // ============ SISTEMA DE INVULNERABILIDAD VISUAL ============
   double _blinkTimer = 0.0;
-  final double _blinkInterval = 0.15; // Parpadeo cada 0.15 segundos
+  final double _blinkInterval = 0.15;
   bool _isVisible = true;
+  
+  // ⭐ NUEVO: Sistema de derrape en hielo
+  bool _isOnIce = false;
+  bool _hasAntiSlip = false;
 
   CarritoComponent({required this.isLandscape, required this.gameState});
 
@@ -47,14 +56,6 @@ class CarritoComponent extends PositionComponent
     priority = 10;
     anchor = Anchor.center;
 
-    // 🖼️ IMAGEN REQUERIDA: assets/cars/car_0_landscape.png
-    // 🖼️ IMAGEN REQUERIDA: assets/cars/car_0_portrait.png
-    // Relación 2:1 según especificaciones
-    // Landscape: 128x64 px (o 256x128, 512x256)
-    // Portrait: 64x128 px (o 128x256, 256x512)
-    
-    // Por ahora carga desde la ubicación temporal
-    // Después cambiar a: 'cars/car_0_landscape.png'
     _visualSprite = SpriteComponent(
       sprite: await game.loadSprite(
         isLandscape ? 'carrito_landscape.png' : 'carrito_portrait.png',
@@ -100,7 +101,7 @@ class CarritoComponent extends PositionComponent
   void update(double dt) {
     super.update(dt);
 
-    // ⭐ Efecto de parpadeo durante invulnerabilidad
+    // Efecto de parpadeo durante invulnerabilidad
     if (gameState.isInvulnerable) {
       _blinkTimer += dt;
       if (_blinkTimer >= _blinkInterval) {
@@ -109,7 +110,6 @@ class CarritoComponent extends PositionComponent
         _visualSprite.opacity = _isVisible ? 1.0 : 0.3;
       }
     } else {
-      // Asegurar que el sprite sea visible cuando no hay invulnerabilidad
       if (_visualSprite.opacity != 1.0) {
         _visualSprite.opacity = 1.0;
         _isVisible = true;
@@ -239,6 +239,17 @@ class CarritoComponent extends PositionComponent
 
     if (newLane >= 0 && newLane < totalLanes) {
       currentLane = newLane;
+      
+      // ⭐ NUEVO: Derrape en hielo
+      if (_isOnIce && !_hasAntiSlip) {
+        // Deslizar un carril extra en hielo
+        final extraLane = currentLane + direction;
+        if (extraLane >= 0 && extraLane < totalLanes) {
+          print('❄️ ¡Derrape! Te deslizaste un carril extra');
+          currentLane = extraLane;
+        }
+      }
+      
       _animateToLane();
     }
   }
@@ -284,17 +295,22 @@ class CarritoComponent extends PositionComponent
     if (other is CoinComponent) {
       gameState.addCoin();
       other.removeFromParent();
-      // 🔊 SONIDO: Aquí agregar efecto de sonido al recolectar moneda
       print('🪙 Moneda recolectada!');
       return;
     }
 
-    // ⭐ NUEVO: Colisión con power-up
+    // ⭐ Colisión con power-up
     if (other is PowerUpComponent) {
-      other.applyEffect(); // Aplica el efecto (vida o gasolina)
+      other.applyEffect();
       other.removeFromParent();
-      // 🔊 SONIDO: Aquí agregar efecto de sonido de power-up
       print('✨ Power-up recolectado: ${other.type}');
+      return;
+    }
+
+    // ⭐ NUEVO: Colisión con terreno especial
+    if (other is TerrainComponent) {
+      _terrainsInContact.add(other);
+      _applyTerrainEffect(other);
       return;
     }
 
@@ -321,6 +337,15 @@ class CarritoComponent extends PositionComponent
   @override
   void onCollisionEnd(PositionComponent other) {
     super.onCollisionEnd(other);
+
+    // ⭐ NUEVO: Salir de terreno especial
+    if (other is TerrainComponent) {
+      _terrainsInContact.remove(other);
+      if (_terrainsInContact.isEmpty) {
+        _removeTerrainEffect();
+      }
+      return;
+    }
 
     if (other is ObstacleComponent) {
       if (other.type == ObstacleType.jumpable) {
@@ -363,26 +388,16 @@ class CarritoComponent extends PositionComponent
 
   // ============ MANEJO DE COLISIONES CON PÉRDIDA DE VIDA ============
   void _handleCollision(ObstacleComponent obstacle) {
-    // ⭐ No hacer nada si está invulnerable
     if (gameState.isInvulnerable) {
-      print('🛡️ Invulnerable - Colisión ignorada');
       return;
     }
 
     print('💥 ¡Colisión con obstáculo ${obstacle.type}!');
     
-    // ⭐ Perder una vida
     gameState.loseLife();
-    
-    // 🔊 SONIDO: Aquí agregar efecto de sonido de daño/colisión
-    
-    // ⭐ Efecto visual de sacudida
     _addShakeEffect();
-    
-    // Si se acabaron las vidas, el Game Over se maneja automáticamente en game.dart
   }
 
-  // ⭐ Efecto visual de sacudida al recibir daño
   void _addShakeEffect() {
     final originalPosition = position.clone();
     const shakeAmount = 5.0;
@@ -411,5 +426,34 @@ class CarritoComponent extends PositionComponent
     }
 
     shake();
+  }
+
+  // ⭐ NUEVO: Aplicar efecto de terreno
+  void _applyTerrainEffect(TerrainComponent terrain) {
+    final terrainType = terrain.terrainType;
+    
+    if (terrainType == TerrainType.sand) {
+      // Desierto: x3 consumo de gasolina
+      gameState.setFuelMultiplier(3.0);
+      print('🏜️ Entraste en arena - Consumo x3');
+    } else if (terrainType == TerrainType.slowMud) {
+      // Bosque: x1.5 consumo + velocidad reducida
+      gameState.setFuelMultiplier(1.5);
+      print('🌲 Entraste en lodo - Consumo x1.5');
+    } else if (terrainType == TerrainType.ice) {
+      // ⭐ Nieve: activar derrape
+      _isOnIce = true;
+      print('❄️ Entraste en hielo - ¡Cuidado con el derrape!');
+    } else if (terrainType == TerrainType.puddle) {
+      // Lluvia: pérdida temporal de control (TODO)
+      print('🌧️ ¡Charco! Pérdida de control');
+    }
+  }
+
+  // ⭐ NUEVO: Remover efecto de terreno
+  void _removeTerrainEffect() {
+    gameState.resetFuelMultiplier();
+    _isOnIce = false; // ⭐ Desactivar derrape
+    print('✅ Saliste del terreno especial');
   }
 }

@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:carrito_run/game/components/coin_component.dart';
 import 'package:carrito_run/game/components/obstacle_component.dart';
 import 'package:carrito_run/game/components/powerup_component.dart';
+import 'package:carrito_run/game/managers/scenario_manager.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:flame/components.dart';
 
@@ -71,15 +72,15 @@ class ObstacleSpawner extends Component with HasGameReference {
   double _nextPowerUpTime = 10.0;
   
   // Probabilidades de spawn
-  final double _fuelPowerUpChance = 0.65;  // 65% gasolina
-  final double _lifePowerUpChance = 0.35;  // 35% vida extra
+  final double _fuelPowerUpChance = 0.80;  // 80% gasolina
+  final double _lifePowerUpChance = 0.20;  // 20% vida extra
 
   ObstacleSpawner({
     required this.isLandscape,
     required this.gameState,
     this.gameSpeed = 200.0,
     double minSpawnInterval = 0.5,
-    double maxSpawnInterval = 1.5,
+    double maxSpawnInterval = 1.5, required ScenarioManager scenarioManager,
   })  : minSpawnGap = minSpawnInterval,
         maxSpawnGap = maxSpawnInterval;
 
