@@ -1,6 +1,8 @@
 import 'package:carrito_run/game/components/fog_component.dart';
 import 'package:carrito_run/game/managers/fog_spawner.dart';
+import 'package:carrito_run/game/managers/music_manager.dart';
 import 'package:flame/effects.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -22,6 +24,8 @@ class CarritoGame extends FlameGame
         TapCallbacks,
         HasCollisionDetection {
   final GameState gameState;
+  final MusicManager _musicManager = MusicManager();
+  MusicManager get musicManager => _musicManager;
 
   late BackgroundManager _backgroundManager;
   CarritoComponent? _carrito;
@@ -39,12 +43,47 @@ class CarritoGame extends FlameGame
   bool _hasDragged = false;
   Vector2? _panStartPosition;
 
+  late AudioPool coinPool;
+
   CarritoGame({required this.gameState});
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+
+    coinPool = await FlameAudio.createPool(
+      'coin.wav',
+      minPlayers: 3,
+      maxPlayers: 10,
+    );
+
     await _preloadImages();
+
+    await FlameAudio.audioCache.loadAll([
+      'music_intro.ogg',
+      'music_loop.ogg',
+      'music_outro.ogg',
+      'jump.wav',
+      'coin.wav',
+      'crash.wav',
+      'explosion.wav',
+      'powerup.wav',
+      'fuel.wav',
+      'missile_launch.wav',
+      'teleport.wav',
+      'tractor_beam.wav',
+      'cannon_fire.wav',
+      'rewind.wav',
+      'ui_pause.wav',
+      'ui_resume.wav',
+      'loop_sand.wav',
+      'loop_lava.wav',
+      'splash.wav',
+      'freeze.wav',
+      'geyser.wav',
+      'car_stop.wav',
+      'car_start.wav',
+    ]);
 
     _backgroundManager = BackgroundManager();
     add(_backgroundManager);
@@ -62,10 +101,23 @@ class CarritoGame extends FlameGame
 
     _updateCarrito();
 
+    _musicManager.startMusic();
+
     resumeEngine();
   }
 
+  void startBackgroundMusic() {
+    if (!FlameAudio.bgm.isPlaying) {
+      FlameAudio.bgm.play('music.mp3', volume: 0.4);
+    }
+  }
+
+  void stopBackgroundMusic() {
+    FlameAudio.bgm.stop();
+  }
+
   void resetGame() {
+    _musicManager.stop();
     _isPlaying = false;
     _gameOverTriggered = false;
     gameState.setPlaying(false);
@@ -164,6 +216,7 @@ class CarritoGame extends FlameGame
 
     if (gameState.isGameOver && !_gameOverTriggered) {
       _gameOverTriggered = true;
+      _musicManager.playGameOver();
       debugPrint("GAME OVER DETECTADO EN GAME.DART");
 
       Future.delayed(const Duration(milliseconds: 1500), () {

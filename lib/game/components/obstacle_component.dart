@@ -1,6 +1,7 @@
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:carrito_run/game/game.dart';
+import 'package:flame_audio/flame_audio.dart';
 
 enum ObstacleType {
   jumpable, // Plataformas elevadas (Cajas, etc)
@@ -165,6 +166,10 @@ class ObstacleComponent extends SpriteComponent
         if (!isGeyserActive) {
           isGeyserActive = true;
           sprite = _geyserActiveSprite;
+
+          if (position.y > 0 && position.y < game.size.y) {
+            FlameAudio.play('geyser.wav', volume: 0.5);
+          }
         }
       } else {
         if (isGeyserActive) {

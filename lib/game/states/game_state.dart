@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// --- MODELO DE DATOS DEL CARRO ---
 class CarItem {
   final int id;
   final String name;
@@ -22,8 +23,9 @@ class CarItem {
   });
 }
 
+// --- ESTADO PRINCIPAL DEL JUEGO ---
 class GameState extends ChangeNotifier {
-  // --- VARIABLES ---
+  // --- VARIABLES DE PUNTUACIÓN ---
   int _coins = 0;
   int _displayScore = 0;
   int _internalScore = 0;
@@ -31,64 +33,100 @@ class GameState extends ChangeNotifier {
   final double _displayScoreMultiplier = 10.0;
 
   // --- VARIABLES DE HABILIDAD ESPECIAL ---
-  double _abilityCharge = 100.0; // De 0.0 a 100.0
+  double _abilityCharge = 100.0; // Inicia llena
   bool _isAbilityActive = false;
 
-  // Estado del Juego
+  // --- ESTADO DE JUEGO ---
   bool _isPlaying = false;
   bool _isGameOver = false;
-  bool _isOffRoad = false; // Para el desierto y el volcan
 
-  bool get isOffRoad => _isOffRoad;
+  // Variable privada de terreno
+  bool _isOffRoad = false;
 
-  // Sistema de Gasolina
+  // --- SISTEMA DE GASOLINA ---
   double _fuel = 100.0;
-  final double _maxFuel = 100.0;
-  // Consumo ajustado para que dure la sección + margen
   final double _fuelConsumptionRate = 1.15;
   final double _collisionDamage = 30.0;
   final double _smallFuelRecovery = 15.0;
 
-  // Sistema de Secciones
+  // --- SISTEMA DE SECCIONES ---
   int _currentSection = 1;
   int _nextGasStationScore = 50;
   final int _firstGasStation = 50;
   final int _gasStationInterval = 60;
 
-  // Costo de Gasolina
+  // --- COSTO Y VELOCIDAD ---
   int _refuelCost = 15;
-
-  // Velocidad
   final double _baseSpeed = 400.0;
   final double _maxSpeed = 1000.0;
   final int _maxSpeedSection = 11;
 
+  // --- ESCUDO (BUMPER CAR) ---
   bool _hasShield = false;
-  bool get hasShield => _hasShield;
 
   // --- VARIABLES DE LA TIENDA ---
   int _totalWalletCoins = 0;
-  int _maxSectionReached = 1; // Récord histórico del jugador
-  int _selectedCarId = 0; // ID del carro equipado (0 es el default)
+  int _maxSectionReached = 1;
+  int _selectedCarId = 0;
   List<int> _ownedCarIds = [0];
 
+  // --- HISTORIAL (DELOREAN) ---
   final List<double> _fuelHistory = [];
   double _historyTimer = 0.0;
 
-  bool get currentCarHasActiveAbility {
-    // Lista de IDs que tienen habilidad activa (Según tu diseño anterior)
-    // 6: Bulldozer
-    // 10: 007
-    // 12: Teleport
-    // 13: OVNI
-    // 14: Tanque
-    // 15: DeLorean
-    // 16: El Dorado
-    const activeAbilityCarIds = [6, 9, 10, 12, 13, 14, 15, 16];
+  // =========================================================
+  //                        GETTERS
+  // =========================================================
 
+  // El getter que te faltaba:
+  bool get isOffRoad => _isOffRoad;
+
+  int get coins => _coins;
+  int get score => _displayScore;
+  int get internalScore => _internalScore;
+  double get timeElapsed => _timeElapsed;
+  double get abilityCharge => _abilityCharge;
+  bool get isAbilityActive => _isAbilityActive;
+  bool get hasShield => _hasShield;
+
+  double get fuel => _fuel;
+
+  // Max Fuel Dinámico según el carro
+  double get maxFuel {
+    if (_selectedCarId == 2) return 130.0; // Pickup
+    if (_selectedCarId == 16) return 200.0; // El Dorado
+    return 100.0;
+  }
+
+  int get currentSection => _currentSection;
+  int get refuelCost => _refuelCost;
+  bool get isOutOfFuel => _fuel <= 0;
+  bool get isPlaying => _isPlaying;
+  bool get isGameOver => _isGameOver;
+  int get nextGasStationScore => _nextGasStationScore;
+  int get scoreUntilNextGasStation => _nextGasStationScore - _internalScore;
+
+  int get totalWalletCoins => _totalWalletCoins;
+  int get selectedCarId => _selectedCarId;
+  int get maxSectionReached => _maxSectionReached;
+
+  double get currentSpeed {
+    if (_currentSection >= _maxSpeedSection) return _maxSpeed;
+    double progress = (_currentSection - 1) / (_maxSpeedSection - 1);
+    return _baseSpeed + ((_maxSpeed - _baseSpeed) * progress);
+  }
+
+  double get speedMultiplier => currentSpeed / _baseSpeed;
+
+  bool get currentCarHasActiveAbility {
+    // IDs de carros con barra de habilidad
+    const activeAbilityCarIds = [6, 9, 10, 12, 13, 14, 15, 16];
     return activeAbilityCarIds.contains(_selectedCarId);
   }
 
+  // =========================================================
+  //                    CATÁLOGO DE CARROS
+  // =========================================================
   final List<CarItem> allCars = [
     // TIER 0
     CarItem(
@@ -99,7 +137,8 @@ class GameState extends ChangeNotifier {
       requiredSection: 0,
       requiredPreviousCars: [],
       assetPath: 'classic',
-    ), // Nombre del archivo base (classic_landscape.png)
+    ),
+
     // TIER 1
     CarItem(
       id: 1,
@@ -274,42 +313,9 @@ class GameState extends ChangeNotifier {
     ),
   ];
 
-  // --- GETTERS ---
-  int get coins => _coins;
-  int get score => _displayScore;
-  int get internalScore => _internalScore;
-  double get abilityCharge => _abilityCharge;
-  bool get isAbilityActive => _isAbilityActive;
-  double get timeElapsed => _timeElapsed;
-  double get fuel => _fuel;
-  double get maxFuel {
-    if (_selectedCarId == 2) return 130.0;
-
-    if (_selectedCarId == 16) return 200.0;
-
-    return 100.0;
-  }
-
-  int get currentSection => _currentSection;
-  int get refuelCost => _refuelCost;
-  bool get isOutOfFuel => _fuel <= 0;
-  bool get isPlaying => _isPlaying;
-  bool get isGameOver => _isGameOver;
-  int get nextGasStationScore => _nextGasStationScore;
-  int get scoreUntilNextGasStation => _nextGasStationScore - _internalScore;
-  int get totalWalletCoins => _totalWalletCoins;
-  int get selectedCarId => _selectedCarId;
-  int get maxSectionReached => _maxSectionReached;
-
-  double get currentSpeed {
-    if (_currentSection >= _maxSpeedSection) return _maxSpeed;
-    double progress = (_currentSection - 1) / (_maxSpeedSection - 1);
-    return _baseSpeed + ((_maxSpeed - _baseSpeed) * progress);
-  }
-
-  double get speedMultiplier => currentSpeed / _baseSpeed;
-
-  // --- MÉTODOS ---
+  // =========================================================
+  //                        MÉTODOS
+  // =========================================================
 
   void setPlaying(bool playing) {
     _isPlaying = playing;
@@ -318,6 +324,7 @@ class GameState extends ChangeNotifier {
 
   void setOffRoad(bool isOffRoad) {
     _isOffRoad = isOffRoad;
+    // No notificamos aquí para no saturar el renderizado en cada frame
   }
 
   bool shouldSpawnGasStation() {
@@ -337,9 +344,7 @@ class GameState extends ChangeNotifier {
 
   void addCoin() {
     int value = 1;
-
-    if (_selectedCarId == 16) value = 2;
-
+    if (_selectedCarId == 16) value = 2; // El Dorado
     _coins += value;
     _safeNotifyListeners();
   }
@@ -348,39 +353,35 @@ class GameState extends ChangeNotifier {
     if (_fuel < maxFuel) {
       double recovery = _smallFuelRecovery;
 
-      if (_selectedCarId == 5) {
-        recovery *= 2.0;
-      }
+      if (_selectedCarId == 5) recovery *= 2.0; // Ambulancia
 
       _fuel += recovery;
       if (_fuel > maxFuel) _fuel = maxFuel;
 
-      addAbilityCharge(20.0);
-
+      addAbilityCharge(20.0); // Carga habilidad
       _safeNotifyListeners();
     }
   }
 
   void takeHit() {
     if (_fuel > 0 && !_isGameOver) {
-      // 1. LÓGICA ESCUDO (Bumper Car)
+      // Escudo
       if (_hasShield) {
-        consumeShield(); // Se rompe el escudo
-        return; // ¡NO RECIBES DAÑO!
+        consumeShield();
+        return;
       }
 
-      double damage = _collisionDamage; // Base 30.0
+      double damage = _collisionDamage;
 
-      // 2. LÓGICA ELÉCTRICO (ID 8): Daño Doble (60%)
-      if (_selectedCarId == 8) {
-        damage = 60.0;
-      }
+      // Eléctrico (Doble daño)
+      if (_selectedCarId == 8) damage = 60.0;
 
-      if (_selectedCarId == 14) {
-        damage = 15.0;
-      }
+      // Tanque (Mitad daño)
+      if (_selectedCarId == 14) damage = 15.0;
 
       _fuel -= damage;
+
+      // Detectar muerte por golpe
       if (_fuel <= 0) {
         _fuel = 0;
         _triggerGameOver();
@@ -392,12 +393,14 @@ class GameState extends ChangeNotifier {
   void updateTime(double dt) {
     if (_isGameOver) return;
 
+    // Carga pasiva
     addAbilityCharge(2.0 * dt);
 
     _timeElapsed += dt;
     _internalScore = _timeElapsed.floor();
     _displayScore = (_timeElapsed * _displayScoreMultiplier).toInt();
 
+    // DeLorean History
     if (_selectedCarId == 15) {
       _historyTimer += dt;
       if (_historyTimer >= 0.5) {
@@ -412,29 +415,32 @@ class GameState extends ChangeNotifier {
     if (_fuel > 0) {
       double currentConsumption = _fuelConsumptionRate;
 
+      // Lógica Desierto
       bool isDesertSection = (_currentSection - 1) % 5 == 0;
-
       if (isDesertSection && _isOffRoad) {
-        if (_selectedCarId != 4) {
+        if (_selectedCarId != 4 &&
+            _selectedCarId != 11 &&
+            _selectedCarId != 16) {
           currentConsumption *= 3.0;
         }
       }
 
-      if (_selectedCarId == 7) {
-        currentConsumption *= 0.90;
-      }
-
-      if (_selectedCarId == 8) {
-        currentConsumption = 0.0;
-      }
-
-      // Volcán sigue haciendo daño a todos por ahora
+      // Lógica Volcán
       bool isVolcanoSection = (_currentSection - 1) % 5 == 4;
       if (isVolcanoSection && _isOffRoad) {
-        currentConsumption *= 10.0;
+        if (_selectedCarId != 11 && _selectedCarId != 16) {
+          currentConsumption *= 10.0;
+        }
       }
 
+      // F1
+      if (_selectedCarId == 7) currentConsumption *= 0.90;
+
+      // Eléctrico
+      if (_selectedCarId == 8) currentConsumption = 0.0;
+
       _fuel -= currentConsumption * dt;
+
       if (_fuel <= 0) {
         _fuel = 0;
         _triggerGameOver();
@@ -447,7 +453,7 @@ class GameState extends ChangeNotifier {
     _isGameOver = true;
     if (_coins > 0) {
       _totalWalletCoins += _coins;
-      _saveData(); // Guardamos en disco inmediatamente
+      _saveData();
       debugPrint(
         "💰 Se agregaron $_coins a la cartera. Total: $_totalWalletCoins",
       );
@@ -496,12 +502,20 @@ class GameState extends ChangeNotifier {
     }
   }
 
-  // Recupera la gasolina al 100%
+  // --- TRUCOS ---
   void debugFillFuel() {
-    _fuel = _maxFuel;
+    _fuel = maxFuel;
     _safeNotifyListeners();
   }
 
+  void debugUnlockAllCars() {
+    _ownedCarIds = allCars.map((car) => car.id).toList();
+    if (_maxSectionReached < 20) _maxSectionReached = 20;
+    _saveData();
+    notifyListeners();
+  }
+
+  // --- PERSISTENCIA ---
   Future<void> loadData() async {
     final prefs = await SharedPreferences.getInstance();
     _totalWalletCoins = prefs.getInt('wallet_coins') ?? 0;
@@ -514,7 +528,6 @@ class GameState extends ChangeNotifier {
     } else {
       _ownedCarIds = [0];
     }
-
     _safeNotifyListeners();
   }
 
@@ -526,17 +539,14 @@ class GameState extends ChangeNotifier {
     await prefs.setString('owned_cars', _ownedCarIds.join(','));
   }
 
+  // --- TIENDA ---
   bool isCarUnlocked(int carId) {
     if (_ownedCarIds.contains(carId)) return true;
-
     final car = allCars.firstWhere((c) => c.id == carId);
-
     if (_maxSectionReached < car.requiredSection) return false;
-
     for (int reqId in car.requiredPreviousCars) {
       if (!_ownedCarIds.contains(reqId)) return false;
     }
-
     return true;
   }
 
@@ -544,7 +554,6 @@ class GameState extends ChangeNotifier {
 
   void buyCar(int carId) {
     final car = allCars.firstWhere((c) => c.id == carId);
-
     if (_totalWalletCoins >= car.price && isCarUnlocked(carId)) {
       _totalWalletCoins -= car.price;
       _ownedCarIds.add(carId);
@@ -569,17 +578,7 @@ class GameState extends ChangeNotifier {
     }
   }
 
-  void debugUnlockAllCars() {
-    _ownedCarIds = allCars.map((car) => car.id).toList();
-
-    if (_maxSectionReached < 20) {
-      _maxSectionReached = 20;
-    }
-
-    _saveData();
-    notifyListeners();
-  }
-
+  // --- HABILIDAD ESPECIAL ---
   void addAbilityCharge(double amount) {
     if (_isAbilityActive) return;
     _abilityCharge += amount;
@@ -613,10 +612,7 @@ class GameState extends ChangeNotifier {
   void rewindTime() {
     if (_fuelHistory.isNotEmpty) {
       double oldFuel = _fuelHistory.first;
-
-      if (oldFuel > _fuel) {
-        _fuel = oldFuel;
-      }
+      if (oldFuel > _fuel) _fuel = oldFuel;
       _fuelHistory.clear();
       _safeNotifyListeners();
     }

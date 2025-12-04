@@ -1,6 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 import 'package:carrito_run/game/game.dart';
+import 'package:flame_audio/flame_audio.dart';
 
 class GasStationComponent extends SpriteComponent
     with HasGameReference<CarritoGame> {
@@ -70,6 +71,7 @@ class GasStationComponent extends SpriteComponent
 
       if (!_hasTriggered && position.x <= 100) {
         _hasTriggered = true;
+        FlameAudio.play('car_stop.wav');
         onReached();
       }
 

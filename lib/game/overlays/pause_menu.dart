@@ -1,3 +1,4 @@
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:carrito_run/game/game.dart';
@@ -16,7 +17,7 @@ class PauseMenu extends StatelessWidget {
       child: Center(
         child: Container(
           width: 300,
-          padding: EdgeInsets.all(30),
+          padding: const EdgeInsets.all(30),
           decoration: BoxDecoration(
             color: Colors.grey.shade900,
             borderRadius: BorderRadius.circular(20),
@@ -25,7 +26,7 @@ class PauseMenu extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              const Text(
                 'PAUSA',
                 style: TextStyle(
                   fontSize: 40,
@@ -33,13 +34,21 @@ class PauseMenu extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              SizedBox(height: 30),
-              // Botón de reanudar
+              const SizedBox(height: 30),
+
+              // --- BOTÓN REANUDAR (CORREGIDO) ---
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () {
+                    // 1. Restaurar volumen de música
+                    game.musicManager.setVolume(0.5);
+
+                    // 2. Sonido de UI
+                    FlameAudio.play('ui_resume.wav');
+
+                    // 3. Reanudar Juego
                     game.overlays.remove('PauseMenu');
                     game.overlays.add('PauseButton');
                     game.resumeEngine();
@@ -50,7 +59,7 @@ class PauseMenu extends StatelessWidget {
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'REANUDAR',
                     style: TextStyle(
                       fontSize: 20,
@@ -60,7 +69,9 @@ class PauseMenu extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 15),
+
+              const SizedBox(height: 15),
+
               // Botón de salir
               SizedBox(
                 width: double.infinity,
@@ -86,13 +97,30 @@ class PauseMenu extends StatelessWidget {
                       await windowManager.setResizable(true);
                     }
 
+                    // Restaurar volumen por si acaso
+                    game.musicManager.setVolume(0.5);
+                    // FlameAudio.play('ui_resume.wav'); // Opcional, ya te vas
+
                     // SALIR
                     game.overlays.remove('PauseMenu');
                     game.overlays.remove('PauseButton');
-                    game.overlays.add('StartScreen');
+                    // game.overlays.add('StartScreen'); // ResetGame ya hace esto en tu código actual
                     game.resetGame();
                   },
-                  child: Text('SALIR', style: TextStyle(/*...*/)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                  child: const Text(
+                    'SALIR',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ],

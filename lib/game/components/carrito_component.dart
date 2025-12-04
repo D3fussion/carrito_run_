@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:carrito_run/game/components/cannon_ball_component.dart';
 import 'package:carrito_run/game/components/missile_component.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/collisions.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -16,6 +19,9 @@ class CarritoComponent extends PositionComponent
     with KeyboardHandler, HasGameReference<CarritoGame>, CollisionCallbacks {
   final bool isLandscape;
   final GameState gameState;
+
+  AudioPlayer? _terrainPlayer; // Reproductor para arena/lava
+  String? _currentTerrainSound;
 
   // Configuración de Carriles
   int currentLane = 2;
@@ -208,9 +214,51 @@ class CarritoComponent extends PositionComponent
     game.add(particle);
   }
 
+  void _manageTerrainSounds() {
+    bool isDesert = (gameState.currentSection - 1) % 5 == 0;
+    bool isVolcano = (gameState.currentSection - 1) % 5 == 4;
+    bool isOffRoad = currentLane == 0 || currentLane == 4;
+
+    // Hovercraft y El Dorado no hacen ruido de terreno
+    if (gameState.selectedCarId == 11 || gameState.selectedCarId == 16)
+      isOffRoad = false;
+
+    String? targetSound;
+
+    if (isOffRoad) {
+      if (isDesert)
+        targetSound = 'loop_sand.wav';
+      else if (isVolcano)
+        targetSound = 'loop_lava.wav';
+    }
+
+    // Si el sonido que deberíamos tocar es diferente al que está sonando
+    if (targetSound != _currentTerrainSound) {
+      // 1. Detener el anterior
+      _terrainPlayer?.stop();
+      _terrainPlayer = null;
+
+      // 2. Iniciar el nuevo (si hay uno)
+      if (targetSound != null) {
+        FlameAudio.loop(targetSound, volume: 0.6).then((player) {
+          _terrainPlayer = player;
+        });
+      }
+
+      _currentTerrainSound = targetSound;
+    }
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
+
+    if (!_hasExploded && !gameState.isGameOver) {
+      _manageTerrainSounds();
+    } else {
+      // Si morimos, callar el terreno
+      _terrainPlayer?.stop();
+    }
 
     if (gameState.isAbilityActive) {
       _abilityDurationTimer -= dt;
@@ -291,6 +339,7 @@ class CarritoComponent extends PositionComponent
       }
 
       if (_iceCampingTimer >= _maxIceTime) {
+        FlameAudio.play('freeze.wav', volume: 0.8);
         debugPrint("¡CONGELADO! Daño recibido.");
         gameState.takeHit();
         _iceCampingTimer = 0.0;
@@ -320,6 +369,10 @@ class CarritoComponent extends PositionComponent
 
   void _triggerExplosionVisuals() {
     if (_cachedExplosionSprite == null) return;
+
+    if (!_hasExploded) {
+      FlameAudio.play('explosion.wav', volume: 1.0);
+    }
 
     _hasExploded = true;
     _isMoving = false;
@@ -478,6 +531,7 @@ class CarritoComponent extends PositionComponent
 
   void jump() {
     if (_hasExploded || _isJumping) return;
+    FlameAudio.play('jump.wav', volume: 0.6);
     _isJumping = true;
     _jumpGraceTimer = 0.2;
     if (_isOnObstacle && _platformsInContact.isNotEmpty)
@@ -536,11 +590,14 @@ class CarritoComponent extends PositionComponent
     super.onCollisionStart(intersectionPoints, other);
 
     if (other is CoinComponent) {
+      game.coinPool.start(volume: 0.6);
+
       gameState.addCoin();
       other.removeFromParent();
       return;
     }
     if (other is FuelCanisterComponent) {
+      FlameAudio.play('fuel.wav', volume: 0.7);
       gameState.collectFuelCanister();
       other.removeFromParent();
       _visualSprite?.add(
@@ -644,6 +701,7 @@ class CarritoComponent extends PositionComponent
 
   void _handleCollision(ObstacleComponent obstacle) {
     if (_hitGraceTimer > 0) return;
+    FlameAudio.play('crash.wav', volume: 0.7);
     bool hadShield = gameState.hasShield;
     gameState.takeHit();
     _hitGraceTimer = 1.0;
@@ -698,6 +756,9 @@ class CarritoComponent extends PositionComponent
   }
 
   void _applySlowDebuff() {
+    if (_slowEffectVisual == null) {
+      FlameAudio.play('splash.wav', volume: 0.7);
+    }
     _slowDebuffTimer = 2.0;
     if (_slowEffectVisual != null) return;
     if (_fuelPenaltyEffect != null) {
@@ -820,7 +881,11 @@ class CarritoComponent extends PositionComponent
         "Activando habilidad para Carro ID: ${gameState.selectedCarId}",
       );
 
+      // BULLDOZER (ID 6)
       if (gameState.selectedCarId == 6) {
+        // Puedes usar un sonido genérico aquí o crear uno específico de motor potente
+        FlameAudio.play('powerup.wav', volume: 0.8);
+
         _abilityDurationTimer = 5.0;
         gameState.activateAbility();
         _visualSprite?.add(
@@ -830,8 +895,13 @@ class CarritoComponent extends PositionComponent
             opacityTo: 0.8,
           ),
         );
-      } else if (gameState.selectedCarId == 9) {
+      }
+      // BUMPER CAR (ID 9)
+      else if (gameState.selectedCarId == 9) {
         if (!gameState.hasShield) {
+          // Sonido de escudo recargado
+          FlameAudio.play('powerup.wav', volume: 0.8);
+
           gameState.grantShield();
           gameState.activateAbility();
           Future.delayed(
@@ -848,7 +918,12 @@ class CarritoComponent extends PositionComponent
         } else {
           debugPrint("¡Escudo lleno, no se gasta la habilidad!");
         }
-      } else if (gameState.selectedCarId == 10) {
+      }
+      // --- AGENTE 007 (ID 10) - MISIL ---
+      else if (gameState.selectedCarId == 10) {
+        // SONIDO DE LANZAMIENTO
+        FlameAudio.play('missile_launch.wav', volume: 1.0);
+
         gameState.activateAbility();
 
         final missile = MissileComponent(
@@ -863,10 +938,16 @@ class CarritoComponent extends PositionComponent
         Future.delayed(const Duration(seconds: 1), () {
           gameState.deactivateAbility();
         });
-      } else if (gameState.selectedCarId == 12) {
+      }
+      // --- TELEPORT (ID 12) - MODO FANTASMA ---
+      else if (gameState.selectedCarId == 12) {
+        // SONIDO DE TELETRANSPORTE
+        FlameAudio.play('teleport.wav', volume: 0.9);
+
         _abilityDurationTimer = 4.0;
         gameState.activateAbility();
 
+        // Opacidad para modo fantasma
         if (_visualSprite != null) {
           _visualSprite!.paint.color = _visualSprite!.paint.color.withOpacity(
             0.5,
@@ -874,7 +955,12 @@ class CarritoComponent extends PositionComponent
         }
 
         debugPrint("¡MODO FANTASMA!");
-      } else if (gameState.selectedCarId == 13) {
+      }
+      // --- OVNI (ID 13) - RAYO TRACTOR ---
+      else if (gameState.selectedCarId == 13) {
+        // SONIDO DE RAYO TRACTOR (Sci-fi wobble)
+        FlameAudio.play('tractor_beam.wav', volume: 0.8);
+
         gameState.activateAbility();
 
         _visualSprite?.add(
@@ -891,7 +977,12 @@ class CarritoComponent extends PositionComponent
           const Duration(seconds: 1),
           () => gameState.deactivateAbility(),
         );
-      } else if (gameState.selectedCarId == 14) {
+      }
+      // --- TANQUE (ID 14) - CAÑONAZO ---
+      else if (gameState.selectedCarId == 14) {
+        // SONIDO DE CAÑÓN FUERTE
+        FlameAudio.play('cannon_fire.wav', volume: 1.0);
+
         gameState.activateAbility();
 
         double cannonWidth = isLandscape ? size.y * 3.0 : size.x * 3.0;
@@ -909,7 +1000,12 @@ class CarritoComponent extends PositionComponent
           const Duration(seconds: 1),
           () => gameState.deactivateAbility(),
         );
-      } else if (gameState.selectedCarId == 15) {
+      }
+      // --- DELOREAN (ID 15) - REWIND ---
+      else if (gameState.selectedCarId == 15) {
+        // SONIDO DE REBOBINAR CINTA
+        FlameAudio.play('rewind.wav', volume: 1.0);
+
         gameState.activateAbility();
 
         gameState.rewindTime();
@@ -924,13 +1020,18 @@ class CarritoComponent extends PositionComponent
 
         _hitGraceTimer = 3.0;
 
-        debugPrint("¡GRAN SCOTT! TIEMPO REBOBINADO");
+        debugPrint("¡TIEMPO REBOBINADO!");
 
         Future.delayed(
           const Duration(seconds: 3),
           () => gameState.deactivateAbility(),
         );
-      } else if (gameState.selectedCarId == 16) {
+      }
+      // --- EL DORADO (ID 16) - TOQUE DE MIDAS ---
+      else if (gameState.selectedCarId == 16) {
+        // Puedes usar un sonido de monedas mágico muy fuerte o reutilizar powerup
+        FlameAudio.play('coin.wav', volume: 1.0); // Ejemplo simple
+
         _abilityDurationTimer = 10.0;
         gameState.activateAbility();
 

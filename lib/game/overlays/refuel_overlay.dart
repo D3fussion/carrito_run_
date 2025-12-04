@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:carrito_run/game/game.dart';
 import 'package:provider/provider.dart';
@@ -37,6 +38,7 @@ class _RefuelOverlayState extends State<RefuelOverlay> {
 
   void _closeOverlay() {
     _timer?.cancel();
+    FlameAudio.play('car_start.wav', volume: 0.8);
     widget.game.overlays.remove('RefuelOverlay');
     widget.game.overlays.add('PauseButton');
     widget.game.resumeAfterGasStation();
