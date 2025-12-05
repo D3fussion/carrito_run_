@@ -155,8 +155,6 @@ class CarritoGame extends FlameGame
       try {
         await images.load('road_landscape_$i.png');
         await images.load('road_portrait_$i.png');
-        await images.load('borders_landscape_$i.png');
-        await images.load('borders_portrait_$i.png');
         await images.load('obstacle_jumpable_$i.png');
         await images.load('obstacle_nonjumpable_$i.png');
       } catch (e) {

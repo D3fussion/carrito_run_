@@ -79,16 +79,12 @@ class BackgroundManager extends PositionComponent
         ? 'road_landscape_$themeIndex.png'
         : 'road_portrait_$themeIndex.png';
 
-    final bordersImage = isLandscape
-        ? 'borders_landscape_$themeIndex.png'
-        : 'borders_portrait_$themeIndex.png';
-
     final velocity = isLandscape
         ? Vector2(80, 0) // Landscape: Mueve a derecha
         : Vector2(0, -80); // Portrait: Mueve arriba
 
     final component = await ParallaxComponent.load(
-      [ParallaxImageData(roadImage), ParallaxImageData(bordersImage)],
+      [ParallaxImageData(roadImage)],
       baseVelocity: velocity,
       images: game.images,
       repeat: isLandscape ? ImageRepeat.repeatX : ImageRepeat.repeatY,
@@ -97,7 +93,6 @@ class BackgroundManager extends PositionComponent
     );
 
     component.parallax?.layers[0].velocityMultiplier = Vector2(1.3, 1.3);
-    component.parallax?.layers[1].velocityMultiplier = Vector2(1.0, 1.0);
 
     component.size = game.size;
     component.parallax?.resize(game.size);
