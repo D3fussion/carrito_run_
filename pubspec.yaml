@@ -38,7 +38,7 @@ dependencies:
   provider: ^6.1.5+1
   window_manager: ^0.5.1
   shared_preferences: ^2.5.3
-  flame_audio: ^2.11.12
+  just_audio: ^0.10.5
 
 dev_dependencies:
   flutter_test:

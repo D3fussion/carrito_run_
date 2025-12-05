@@ -40,7 +40,6 @@ class StartScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Título
                   Container(
                     width: 300,
                     height: 150,
@@ -68,13 +67,11 @@ class StartScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 50),
-                  // Botón JUGAR
                   SizedBox(
                     width: 200,
                     height: 60,
                     child: ElevatedButton(
                       onPressed: () async {
-                        // Lógica de bloqueo de orientación (Móvil)
                         if (!kIsWeb &&
                             (defaultTargetPlatform == TargetPlatform.android ||
                                 defaultTargetPlatform == TargetPlatform.iOS)) {
@@ -93,7 +90,6 @@ class StartScreen extends StatelessWidget {
                           }
                         }
 
-                        // Lógica de bloqueo de ventana (Escritorio)
                         if (!kIsWeb &&
                             (defaultTargetPlatform == TargetPlatform.windows ||
                                 defaultTargetPlatform == TargetPlatform.macOS ||
@@ -102,7 +98,6 @@ class StartScreen extends StatelessWidget {
                           await windowManager.setResizable(false);
                         }
 
-                        // Iniciar Juego
                         game.overlays.remove('StartScreen');
                         game.overlays.add('PauseButton');
 
@@ -128,14 +123,14 @@ class StartScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20), // Espacio
-                  // --- BOTÓN GARAJE ---
+                  const SizedBox(height: 20),
                   SizedBox(
                     width: 200,
                     height: 50,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // Cambiar overlay
+                        game.musicManager.playUiMusic('music_garage.ogg');
+
                         game.overlays.remove('StartScreen');
                         game.overlays.add('ShopScreen');
                       },
@@ -162,7 +157,6 @@ class StartScreen extends StatelessWidget {
             ),
           ),
 
-          // --- CAPA 2: INDICADOR DE MONEDAS (Esquina Superior) ---
           Positioned(
             top: 40,
             right: 20,
@@ -174,9 +168,7 @@ class StartScreen extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(
-                      0.7,
-                    ), // Más oscuro para legibilidad
+                    color: Colors.black.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.amber, width: 2),
                   ),

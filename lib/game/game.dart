@@ -1,8 +1,8 @@
 import 'package:carrito_run/game/components/fog_component.dart';
 import 'package:carrito_run/game/managers/fog_spawner.dart';
 import 'package:carrito_run/game/managers/music_manager.dart';
+import 'package:carrito_run/game/managers/sfx_manager.dart';
 import 'package:flame/effects.dart';
-import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -24,8 +24,12 @@ class CarritoGame extends FlameGame
         TapCallbacks,
         HasCollisionDetection {
   final GameState gameState;
+
   final MusicManager _musicManager = MusicManager();
   MusicManager get musicManager => _musicManager;
+
+  final SfxManager _sfxManager = SfxManager();
+  SfxManager get sfxManager => _sfxManager;
 
   late BackgroundManager _backgroundManager;
   CarritoComponent? _carrito;
@@ -43,47 +47,13 @@ class CarritoGame extends FlameGame
   bool _hasDragged = false;
   Vector2? _panStartPosition;
 
-  late AudioPool coinPool;
-
   CarritoGame({required this.gameState});
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
-    coinPool = await FlameAudio.createPool(
-      'coin.wav',
-      minPlayers: 3,
-      maxPlayers: 10,
-    );
-
     await _preloadImages();
-
-    await FlameAudio.audioCache.loadAll([
-      'music_intro.ogg',
-      'music_loop.ogg',
-      'music_outro.ogg',
-      'jump.wav',
-      'coin.wav',
-      'crash.wav',
-      'explosion.wav',
-      'powerup.wav',
-      'fuel.wav',
-      'missile_launch.wav',
-      'teleport.wav',
-      'tractor_beam.wav',
-      'cannon_fire.wav',
-      'rewind.wav',
-      'ui_pause.wav',
-      'ui_resume.wav',
-      'loop_sand.wav',
-      'loop_lava.wav',
-      'splash.wav',
-      'freeze.wav',
-      'geyser.wav',
-      'car_stop.wav',
-      'car_start.wav',
-    ]);
 
     _backgroundManager = BackgroundManager();
     add(_backgroundManager);
@@ -101,23 +71,12 @@ class CarritoGame extends FlameGame
 
     _updateCarrito();
 
-    _musicManager.startMusic();
+    _musicManager.startGameMusic();
 
     resumeEngine();
   }
 
-  void startBackgroundMusic() {
-    if (!FlameAudio.bgm.isPlaying) {
-      FlameAudio.bgm.play('music.mp3', volume: 0.4);
-    }
-  }
-
-  void stopBackgroundMusic() {
-    FlameAudio.bgm.stop();
-  }
-
   void resetGame() {
-    _musicManager.stop();
     _isPlaying = false;
     _gameOverTriggered = false;
     gameState.setPlaying(false);
@@ -135,6 +94,10 @@ class CarritoGame extends FlameGame
     _backgroundManager.loadInitialTheme(0);
 
     pauseEngine();
+
+    Future.delayed(Duration(milliseconds: 300), () {
+      _musicManager.playUiMusic('music_menu.ogg');
+    });
 
     overlays.add('StartScreen');
   }
@@ -174,6 +137,7 @@ class CarritoGame extends FlameGame
       'geyser_active.png',
       'geyser_inactive.png',
       'missile.png',
+      'cannonball.png',
     ]);
 
     for (var car in gameState.allCars) {
@@ -216,8 +180,10 @@ class CarritoGame extends FlameGame
 
     if (gameState.isGameOver && !_gameOverTriggered) {
       _gameOverTriggered = true;
+
       _musicManager.playGameOver();
-      debugPrint("GAME OVER DETECTADO EN GAME.DART");
+
+      debugPrint("GAME OVER DETECTADO");
 
       Future.delayed(const Duration(milliseconds: 1500), () {
         pauseEngine();
@@ -323,7 +289,6 @@ class CarritoGame extends FlameGame
     if (!_isPlaying) return;
     _hasDragged = false;
     _panStartPosition = info.eventPosition.global;
-
     _carrito?.onPanStart();
   }
 
@@ -377,7 +342,6 @@ class CarritoGame extends FlameGame
       if (_isPlaying && !gameState.isGameOver) {
         debugPrint("🔧 DEV CHEAT: Gasolina rellenada al 100%");
         gameState.debugFillFuel();
-
         _carrito?.add(
           ColorEffect(
             Colors.green,
@@ -385,7 +349,6 @@ class CarritoGame extends FlameGame
             opacityTo: 0.8,
           ),
         );
-
         return KeyEventResult.handled;
       }
     }
@@ -398,5 +361,12 @@ class CarritoGame extends FlameGame
     }
 
     return super.onKeyEvent(event, keysPressed);
+  }
+
+  @override
+  void onRemove() {
+    _musicManager.dispose();
+    _sfxManager.dispose();
+    super.onRemove();
   }
 }

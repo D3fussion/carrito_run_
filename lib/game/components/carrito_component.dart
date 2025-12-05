@@ -5,7 +5,6 @@ import 'package:carrito_run/game/components/missile_component.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/collisions.dart';
-import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -14,6 +13,7 @@ import 'package:carrito_run/game/states/game_state.dart';
 import 'package:carrito_run/game/components/obstacle_component.dart';
 import 'package:carrito_run/game/components/coin_component.dart';
 import 'package:carrito_run/game/components/fuel_canister_component.dart';
+import 'package:just_audio/just_audio.dart';
 
 class CarritoComponent extends PositionComponent
     with KeyboardHandler, HasGameReference<CarritoGame>, CollisionCallbacks {
@@ -66,7 +66,7 @@ class CarritoComponent extends PositionComponent
   // Variables Hielo/Lava
   double _iceCampingTimer = 0.0;
   double _currentIceTintIntensity = 0.0;
-  final double _maxIceTime = 2.0;
+  final double _maxIceTime = 3.0;
   double _abilityDurationTimer = 0.0;
   double _lavaDamageTimer = 0.0;
 
@@ -232,17 +232,16 @@ class CarritoComponent extends PositionComponent
         targetSound = 'loop_lava.wav';
     }
 
-    // Si el sonido que deberíamos tocar es diferente al que está sonando
     if (targetSound != _currentTerrainSound) {
-      // 1. Detener el anterior
       _terrainPlayer?.stop();
       _terrainPlayer = null;
 
-      // 2. Iniciar el nuevo (si hay uno)
       if (targetSound != null) {
-        FlameAudio.loop(targetSound, volume: 0.6).then((player) {
-          _terrainPlayer = player;
-        });
+        _terrainPlayer = AudioPlayer();
+        _terrainPlayer!.setAsset('assets/audio/$targetSound');
+        _terrainPlayer!.setLoopMode(LoopMode.all); // Loop infinito
+        _terrainPlayer!.setVolume(0.6);
+        _terrainPlayer!.play();
       }
 
       _currentTerrainSound = targetSound;
@@ -256,7 +255,6 @@ class CarritoComponent extends PositionComponent
     if (!_hasExploded && !gameState.isGameOver) {
       _manageTerrainSounds();
     } else {
-      // Si morimos, callar el terreno
       _terrainPlayer?.stop();
     }
 
@@ -339,7 +337,7 @@ class CarritoComponent extends PositionComponent
       }
 
       if (_iceCampingTimer >= _maxIceTime) {
-        FlameAudio.play('freeze.wav', volume: 0.8);
+        game.sfxManager.play('freeze.wav', volume: 0.8);
         debugPrint("¡CONGELADO! Daño recibido.");
         gameState.takeHit();
         _iceCampingTimer = 0.0;
@@ -371,7 +369,7 @@ class CarritoComponent extends PositionComponent
     if (_cachedExplosionSprite == null) return;
 
     if (!_hasExploded) {
-      FlameAudio.play('explosion.wav', volume: 1.0);
+      game.sfxManager.play('explosion.wav', volume: 1.0);
     }
 
     _hasExploded = true;
@@ -531,7 +529,7 @@ class CarritoComponent extends PositionComponent
 
   void jump() {
     if (_hasExploded || _isJumping) return;
-    FlameAudio.play('jump.wav', volume: 0.6);
+    game.sfxManager.play('jump.wav', volume: 0.6);
     _isJumping = true;
     _jumpGraceTimer = 0.2;
     if (_isOnObstacle && _platformsInContact.isNotEmpty)
@@ -590,14 +588,14 @@ class CarritoComponent extends PositionComponent
     super.onCollisionStart(intersectionPoints, other);
 
     if (other is CoinComponent) {
-      game.coinPool.start(volume: 0.6);
+      game.sfxManager.playCoin();
 
       gameState.addCoin();
       other.removeFromParent();
       return;
     }
     if (other is FuelCanisterComponent) {
-      FlameAudio.play('fuel.wav', volume: 0.7);
+      game.sfxManager.play('fuel.wav', volume: 0.7);
       gameState.collectFuelCanister();
       other.removeFromParent();
       _visualSprite?.add(
@@ -701,7 +699,7 @@ class CarritoComponent extends PositionComponent
 
   void _handleCollision(ObstacleComponent obstacle) {
     if (_hitGraceTimer > 0) return;
-    FlameAudio.play('crash.wav', volume: 0.7);
+    game.sfxManager.play('crash.wav', volume: 0.7);
     bool hadShield = gameState.hasShield;
     gameState.takeHit();
     _hitGraceTimer = 1.0;
@@ -757,7 +755,7 @@ class CarritoComponent extends PositionComponent
 
   void _applySlowDebuff() {
     if (_slowEffectVisual == null) {
-      FlameAudio.play('splash.wav', volume: 0.7);
+      game.sfxManager.play('splash.wav', volume: 0.7);
     }
     _slowDebuffTimer = 2.0;
     if (_slowEffectVisual != null) return;
@@ -883,8 +881,7 @@ class CarritoComponent extends PositionComponent
 
       // BULLDOZER (ID 6)
       if (gameState.selectedCarId == 6) {
-        // Puedes usar un sonido genérico aquí o crear uno específico de motor potente
-        FlameAudio.play('powerup.wav', volume: 0.8);
+        game.sfxManager.play('powerup.wav', volume: 0.8);
 
         _abilityDurationTimer = 5.0;
         gameState.activateAbility();
@@ -899,8 +896,7 @@ class CarritoComponent extends PositionComponent
       // BUMPER CAR (ID 9)
       else if (gameState.selectedCarId == 9) {
         if (!gameState.hasShield) {
-          // Sonido de escudo recargado
-          FlameAudio.play('powerup.wav', volume: 0.8);
+          game.sfxManager.play('powerup.wav', volume: 0.7);
 
           gameState.grantShield();
           gameState.activateAbility();
@@ -921,8 +917,7 @@ class CarritoComponent extends PositionComponent
       }
       // --- AGENTE 007 (ID 10) - MISIL ---
       else if (gameState.selectedCarId == 10) {
-        // SONIDO DE LANZAMIENTO
-        FlameAudio.play('missile_launch.wav', volume: 1.0);
+        game.sfxManager.play('missile_launch.wav', volume: 0.5);
 
         gameState.activateAbility();
 
@@ -941,13 +936,11 @@ class CarritoComponent extends PositionComponent
       }
       // --- TELEPORT (ID 12) - MODO FANTASMA ---
       else if (gameState.selectedCarId == 12) {
-        // SONIDO DE TELETRANSPORTE
-        FlameAudio.play('teleport.wav', volume: 0.9);
+        game.sfxManager.play('teleport.wav', volume: 0.9);
 
         _abilityDurationTimer = 4.0;
         gameState.activateAbility();
 
-        // Opacidad para modo fantasma
         if (_visualSprite != null) {
           _visualSprite!.paint.color = _visualSprite!.paint.color.withOpacity(
             0.5,
@@ -958,8 +951,7 @@ class CarritoComponent extends PositionComponent
       }
       // --- OVNI (ID 13) - RAYO TRACTOR ---
       else if (gameState.selectedCarId == 13) {
-        // SONIDO DE RAYO TRACTOR (Sci-fi wobble)
-        FlameAudio.play('tractor_beam.wav', volume: 0.8);
+        game.sfxManager.play('tractor_beam.wav', volume: 0.8);
 
         gameState.activateAbility();
 
@@ -980,8 +972,7 @@ class CarritoComponent extends PositionComponent
       }
       // --- TANQUE (ID 14) - CAÑONAZO ---
       else if (gameState.selectedCarId == 14) {
-        // SONIDO DE CAÑÓN FUERTE
-        FlameAudio.play('cannon_fire.wav', volume: 1.0);
+        game.sfxManager.play('cannon_fire.wav', volume: 1.0);
 
         gameState.activateAbility();
 
@@ -1003,8 +994,7 @@ class CarritoComponent extends PositionComponent
       }
       // --- DELOREAN (ID 15) - REWIND ---
       else if (gameState.selectedCarId == 15) {
-        // SONIDO DE REBOBINAR CINTA
-        FlameAudio.play('rewind.wav', volume: 1.0);
+        game.sfxManager.play('rewind.wav', volume: 1.0);
 
         gameState.activateAbility();
 
@@ -1029,8 +1019,7 @@ class CarritoComponent extends PositionComponent
       }
       // --- EL DORADO (ID 16) - TOQUE DE MIDAS ---
       else if (gameState.selectedCarId == 16) {
-        // Puedes usar un sonido de monedas mágico muy fuerte o reutilizar powerup
-        FlameAudio.play('coin.wav', volume: 1.0); // Ejemplo simple
+        game.sfxManager.play('coin.wav', volume: 1.0);
 
         _abilityDurationTimer = 10.0;
         gameState.activateAbility();

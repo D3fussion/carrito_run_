@@ -35,6 +35,8 @@ class ShopScreen extends StatelessWidget {
                       onPressed: () {
                         game.overlays.remove('ShopScreen');
                         game.overlays.add('StartScreen');
+
+                        game.musicManager.playUiMusic('music_menu.ogg');
                       },
                     ),
                   ),
@@ -88,7 +90,7 @@ class ShopScreen extends StatelessWidget {
               ),
             ),
 
-            // --- LISTA DE CARROS (GRID) ---
+            // --- Lista de Carros ---
             Expanded(
               child: Consumer<GameState>(
                 builder: (context, state, _) {
@@ -96,22 +98,19 @@ class ShopScreen extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2, // 2 Columnas
-                          childAspectRatio:
-                              0.8, // Relación de aspecto (Más alto que ancho)
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.8,
                           crossAxisSpacing: 15,
                           mainAxisSpacing: 15,
                         ),
                     itemCount: state.allCars.length,
                     itemBuilder: (context, index) {
-                      // 1. DEFINICIÓN DE LA VARIABLE 'car'
                       final car = state.allCars[index];
 
                       final isOwned = state.isCarOwned(car.id);
                       final isSelected = state.selectedCarId == car.id;
                       final isUnlockable = state.isCarUnlocked(car.id);
 
-                      // Lógica de colores según estado
                       Color cardColor = Colors.grey[900]!;
                       Color borderColor = Colors.white10;
                       double opacity = 1.0;
@@ -120,7 +119,7 @@ class ShopScreen extends StatelessWidget {
                         cardColor = Colors.green[900]!.withOpacity(0.5);
                         borderColor = Colors.greenAccent;
                       } else if (!isOwned && !isUnlockable) {
-                        opacity = 0.5; // Oscurecer si está bloqueado por nivel
+                        opacity = 0.5;
                       }
 
                       return Opacity(
@@ -144,17 +143,14 @@ class ShopScreen extends StatelessWidget {
                             children: [
                               const SizedBox(height: 10),
 
-                              // 2. IMAGEN DEL CARRO
                               Expanded(
                                 flex: 3,
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Image.asset(
-                                    // Usamos la versión landscape para que se vea de lado en la tienda
                                     'assets/images/carts/${car.assetPath}_landscape.png',
                                     fit: BoxFit.contain,
 
-                                    // Si no encuentra la imagen, muestra un ícono
                                     errorBuilder: (context, error, stackTrace) {
                                       return Icon(
                                         Icons.directions_car_filled,
@@ -168,7 +164,6 @@ class ShopScreen extends StatelessWidget {
                                 ),
                               ),
 
-                              // 3. INFORMACIÓN
                               Expanded(
                                 flex: 2,
                                 child: Column(
@@ -202,7 +197,6 @@ class ShopScreen extends StatelessWidget {
                                 ),
                               ),
 
-                              // 4. BOTÓN DE ACCIÓN
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(
                                   10,
@@ -238,7 +232,6 @@ class ShopScreen extends StatelessWidget {
     );
   }
 
-  // Método helper para decidir qué botón mostrar
   Widget _buildActionButton(
     BuildContext context,
     GameState state,
@@ -325,7 +318,6 @@ class ShopScreen extends StatelessWidget {
         ),
       );
     } else {
-      // ESTADO BLOQUEADO
       return Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(

@@ -1,4 +1,3 @@
-import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:carrito_run/game/game.dart';
@@ -36,19 +35,16 @@ class PauseMenu extends StatelessWidget {
               ),
               const SizedBox(height: 30),
 
-              // --- BOTÓN REANUDAR (CORREGIDO) ---
+              // --- Boton Reanudar ---
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () {
-                    // 1. Restaurar volumen de música
                     game.musicManager.setVolume(0.5);
 
-                    // 2. Sonido de UI
-                    FlameAudio.play('ui_resume.wav');
+                    game.sfxManager.play('ui_resume.wav');
 
-                    // 3. Reanudar Juego
                     game.overlays.remove('PauseMenu');
                     game.overlays.add('PauseButton');
                     game.resumeEngine();
@@ -89,7 +85,6 @@ class PauseMenu extends StatelessWidget {
                       ]);
                     }
 
-                    // DESBLOQUEAR ESCRITORIO
                     if (!kIsWeb &&
                         (defaultTargetPlatform == TargetPlatform.windows ||
                             defaultTargetPlatform == TargetPlatform.macOS ||
@@ -97,14 +92,10 @@ class PauseMenu extends StatelessWidget {
                       await windowManager.setResizable(true);
                     }
 
-                    // Restaurar volumen por si acaso
                     game.musicManager.setVolume(0.5);
-                    // FlameAudio.play('ui_resume.wav'); // Opcional, ya te vas
 
-                    // SALIR
                     game.overlays.remove('PauseMenu');
                     game.overlays.remove('PauseButton');
-                    // game.overlays.add('StartScreen'); // ResetGame ya hace esto en tu código actual
                     game.resetGame();
                   },
                   style: ElevatedButton.styleFrom(

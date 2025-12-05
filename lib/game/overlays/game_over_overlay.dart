@@ -69,7 +69,6 @@ class GameOverOverlay extends StatelessWidget {
                               defaultTargetPlatform == TargetPlatform.linux)) {
                         await windowManager.setResizable(true);
                       }
-                      game.overlays.remove('GameOverOverlay');
                       game.resetGame();
                     },
                     style: ElevatedButton.styleFrom(

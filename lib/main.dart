@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
 import 'package:flame/flame.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -25,6 +26,8 @@ Future<void> main() async {
           defaultTargetPlatform == TargetPlatform.macOS ||
           defaultTargetPlatform == TargetPlatform.linux)) {
     await windowManager.ensureInitialized();
+
+    await AudioPlayer.clearAssetCache();
 
     WindowOptions windowOptions = const WindowOptions(
       size: Size(450, 800),
@@ -95,6 +98,12 @@ class _MyHomePageState extends State<MyHomePage> {
     gameState.loadData();
 
     game = CarritoGame(gameState: gameState);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(Duration(milliseconds: 300), () {
+        game.musicManager.playUiMusic('music_menu.ogg');
+      });
+    });
   }
 
   @override

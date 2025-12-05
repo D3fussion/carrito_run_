@@ -1,7 +1,6 @@
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:carrito_run/game/game.dart';
-import 'package:flame_audio/flame_audio.dart';
 
 enum ObstacleType {
   jumpable, // Plataformas elevadas (Cajas, etc)
@@ -87,7 +86,6 @@ class ObstacleComponent extends SpriteComponent
     try {
       sprite = await game.loadSprite(spriteName);
     } catch (e) {
-      // Fallback al tema 0 si falta la imagen del tema actual
       if (type == ObstacleType.jumpable)
         sprite = await game.loadSprite('obstacle_jumpable_0.png');
       if (type == ObstacleType.nonJumpable)
@@ -168,7 +166,7 @@ class ObstacleComponent extends SpriteComponent
           sprite = _geyserActiveSprite;
 
           if (position.y > 0 && position.y < game.size.y) {
-            FlameAudio.play('geyser.wav', volume: 0.5);
+            game.sfxManager.play('geyser.wav', volume: 0.5);
           }
         }
       } else {

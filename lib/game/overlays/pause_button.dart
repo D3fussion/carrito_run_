@@ -1,4 +1,3 @@
-import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:carrito_run/game/game.dart';
 
@@ -16,8 +15,8 @@ class PauseButton extends StatelessWidget {
         color: Colors.transparent,
         child: IconButton(
           onPressed: () {
-            game.musicManager.setVolume(0.2); 
-            FlameAudio.play('ui_pause.wav');
+            game.musicManager.setVolume(0.2);
+            game.sfxManager.play('ui_pause.wav');
             game.pauseEngine();
             game.overlays.remove('PauseButton');
             game.overlays.add('PauseMenu');
