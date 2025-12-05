@@ -9,6 +9,7 @@ class ShopScreen extends StatelessWidget {
   const ShopScreen({super.key, required this.game});
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.black.withOpacity(0.95),
@@ -21,23 +22,33 @@ class ShopScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Botón Regresar
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[800],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                        size: 28,
+                  GestureDetector(
+                    onTap: () {
+                      game.overlays.remove('ShopScreen');
+                      game.overlays.add('StartScreen');
+                      game.musicManager.playUiMusic('music_menu.ogg');
+                    },
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black,
+                            offset: Offset(4, 4),
+                            blurRadius: 0,
+                          ),
+                        ],
                       ),
-                      onPressed: () {
-                        game.overlays.remove('ShopScreen');
-                        game.overlays.add('StartScreen');
-
-                        game.musicManager.playUiMusic('music_menu.ogg');
-                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Image.asset(
+                          'assets/images/ui/icon_back.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                   ),
 
@@ -45,10 +56,17 @@ class ShopScreen extends StatelessWidget {
                   const Text(
                     'GARAJE',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
+                      fontFamily: 'PressStart2P',
+                      color: Colors.cyanAccent,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 3.0,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 0,
+                          color: Colors.blue,
+                          offset: Offset(3, 3),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -62,22 +80,26 @@ class ShopScreen extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: Colors.black,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.amber, width: 2),
+                          border: Border.all(
+                            color: const Color(0xFFfacb03),
+                            width: 3,
+                          ),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.savings,
-                              color: Colors.amber,
-                              size: 24,
+                            Image.asset(
+                              'assets/images/ui/icon_coin.png',
+                              width: 24,
+                              height: 24,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               '${state.totalWalletCoins}',
                               style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
+                                fontFamily: 'PressStart2P',
+                                color: Color(0xFFfacb03),
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -90,7 +112,7 @@ class ShopScreen extends StatelessWidget {
               ),
             ),
 
-            // --- Lista de Carros ---
+            // Lista de carros
             Expanded(
               child: Consumer<GameState>(
                 builder: (context, state, _) {
@@ -99,7 +121,7 @@ class ShopScreen extends StatelessWidget {
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          childAspectRatio: 0.8,
+                          childAspectRatio: 0.75,
                           crossAxisSpacing: 15,
                           mainAxisSpacing: 15,
                         ),
@@ -127,14 +149,18 @@ class ShopScreen extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             color: cardColor,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: borderColor, width: 2),
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.greenAccent
+                                  : borderColor,
+                              width: 3,
+                            ),
                             boxShadow: [
                               if (isSelected)
                                 BoxShadow(
                                   color: Colors.green.withOpacity(0.2),
-                                  blurRadius: 15,
-                                  spreadRadius: 2,
+                                  blurRadius: 0,
+                                  offset: const Offset(4, 4),
                                 ),
                             ],
                           ),
@@ -150,7 +176,6 @@ class ShopScreen extends StatelessWidget {
                                   child: Image.asset(
                                     'assets/images/carts/${car.assetPath}_landscape.png',
                                     fit: BoxFit.contain,
-
                                     errorBuilder: (context, error, stackTrace) {
                                       return Icon(
                                         Icons.directions_car_filled,
@@ -171,16 +196,17 @@ class ShopScreen extends StatelessWidget {
                                     Text(
                                       car.name,
                                       style: const TextStyle(
+                                        fontFamily: 'PressStart2P',
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                        fontSize: 10,
                                       ),
                                       textAlign: TextAlign.center,
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 8),
                                     Padding(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 8.0,
+                                        horizontal: 4.0,
                                       ),
                                       child: Text(
                                         car.description,
@@ -246,15 +272,14 @@ class ShopScreen extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: Colors.black45,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.greenAccent),
+            border: Border.all(color: Colors.greenAccent, width: 2),
           ),
           child: const Text(
             "EQUIPADO",
             style: TextStyle(
+              fontFamily: 'PressStart2P',
               color: Colors.greenAccent,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: 8,
             ),
           ),
         );
@@ -263,13 +288,19 @@ class ShopScreen extends StatelessWidget {
           onPressed: () => state.equipCar(car.id),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue[700],
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.zero,
+              side: BorderSide(color: Colors.white, width: 2),
             ),
+            padding: EdgeInsets.zero,
           ),
           child: const Text(
             "EQUIPAR",
-            style: TextStyle(color: Colors.white, fontSize: 12),
+            style: TextStyle(
+              fontFamily: 'PressStart2P',
+              color: Colors.white,
+              fontSize: 8,
+            ),
           ),
         );
       }
@@ -283,7 +314,11 @@ class ShopScreen extends StatelessWidget {
               const SnackBar(
                 content: Text(
                   "¡No tienes suficiente dinero!",
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'PressStart2P',
+                    fontSize: 10,
+                  ),
                 ),
                 backgroundColor: Colors.red,
                 duration: Duration(seconds: 1),
@@ -293,24 +328,38 @@ class ShopScreen extends StatelessWidget {
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.amber[800],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.zero,
+            side: BorderSide(color: Colors.white, width: 2),
+          ),
+          padding: EdgeInsets.zero,
         ),
         child: FittedBox(
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text(
                 "COMPRAR ",
                 style: TextStyle(
+                  fontFamily: 'PressStart2P',
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  fontSize: 8,
                 ),
               ),
-              const Icon(Icons.monetization_on, size: 14, color: Colors.white),
+              Image.asset(
+                'assets/images/ui/icon_coin.png',
+                width: 12,
+                height: 12,
+              ),
+              const SizedBox(width: 4),
               Text(
                 "${car.price}",
                 style: const TextStyle(
+                  fontFamily: 'PressStart2P',
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  fontSize: 8,
                 ),
               ),
             ],
@@ -322,13 +371,18 @@ class ShopScreen extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.black26,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.red.withOpacity(0.5)),
+          border: Border.all(color: Colors.red.withOpacity(0.5), width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.lock, color: Colors.red, size: 16),
+            Image.asset(
+              'assets/images/ui/icon_lock.png',
+              width: 16,
+              height: 16,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 4),
             Text(
               car.requiredSection > 0
                   ? "Llega a Sec. ${car.requiredSection}"

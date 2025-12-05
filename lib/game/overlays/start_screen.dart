@@ -12,6 +12,7 @@ class StartScreen extends StatelessWidget {
   const StartScreen({super.key, required this.game});
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
@@ -32,43 +33,52 @@ class StartScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white24, width: 1),
+                color: Colors.black.withOpacity(0.8),
+                border: Border.all(color: Colors.white, width: 4),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black,
+                    offset: Offset(4, 4),
+                    blurRadius: 0,
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Titulo
                   Container(
-                    width: 300,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white, width: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
                     ),
-                    child: Center(
-                      child: Text(
-                        'CART RUN',
-                        style: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 10.0,
-                              color: Colors.blue,
-                              offset: Offset(0, 0),
-                            ),
-                          ],
-                        ),
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      border: Border.all(color: Colors.cyanAccent, width: 4),
+                    ),
+                    child: Text(
+                      'CART RUN',
+                      style: const TextStyle(
+                        fontFamily: 'PressStart2P',
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.cyanAccent,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 0,
+                            color: Colors.blue,
+                            offset: Offset(4, 4),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  SizedBox(height: 50),
+                  const SizedBox(height: 50),
+
+                  // Boton para jugar
                   SizedBox(
-                    width: 200,
+                    width: 220,
                     height: 60,
                     child: ElevatedButton(
                       onPressed: () async {
@@ -101,54 +111,67 @@ class StartScreen extends StatelessWidget {
                         game.overlays.remove('StartScreen');
                         game.overlays.add('PauseButton');
 
-                        Future.delayed(Duration(milliseconds: 100), () {
+                        Future.delayed(const Duration(milliseconds: 100), () {
                           game.onGameResize(game.size);
                           game.startGame();
                         });
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.zero,
+                          side: BorderSide(color: Colors.white, width: 3),
                         ),
-                        elevation: 10,
+                        elevation: 0,
                       ),
-                      child: Text(
+                      child: const Text(
                         'JUGAR',
                         style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                          fontFamily: 'PressStart2P',
+                          fontSize: 24,
                           color: Colors.white,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
+
+                  // Ir al garege
                   SizedBox(
-                    width: 200,
-                    height: 50,
-                    child: ElevatedButton.icon(
+                    width: 220,
+                    height: 60,
+                    child: ElevatedButton(
                       onPressed: () {
                         game.musicManager.playUiMusic('music_garage.ogg');
-
                         game.overlays.remove('StartScreen');
                         game.overlays.add('ShopScreen');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blueGrey,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.zero,
+                          side: BorderSide(color: Colors.white, width: 3),
                         ),
-                        elevation: 5,
+                        elevation: 0,
                       ),
-                      icon: const Icon(Icons.garage, color: Colors.white),
-                      label: const Text(
-                        'GARAJE',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/ui/icon_garage.png',
+                            width: 24,
+                            height: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'GARAJE',
+                            style: TextStyle(
+                              fontFamily: 'PressStart2P',
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -157,6 +180,7 @@ class StartScreen extends StatelessWidget {
             ),
           ),
 
+          // Monedas
           Positioned(
             top: 40,
             right: 20,
@@ -168,20 +192,27 @@ class StartScreen extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.amber, width: 2),
+                    color: Colors.black.withOpacity(0.8),
+                    border: Border.all(
+                      color: const Color(0xFFfacb03),
+                      width: 3,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.savings, color: Colors.amber, size: 28),
-                      const SizedBox(width: 10),
+                      Image.asset(
+                        'assets/images/ui/icon_coin.png',
+                        width: 24,
+                        height: 24,
+                      ),
+                      const SizedBox(width: 12),
                       Text(
                         '${gameState.totalWalletCoins}',
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
+                          fontFamily: 'PressStart2P',
+                          color: Color(0xFFfacb03),
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

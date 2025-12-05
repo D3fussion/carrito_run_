@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
 import 'package:flame/flame.dart';
 import 'package:just_audio/just_audio.dart';
+
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -180,8 +181,12 @@ class _MyHomePageState extends State<MyHomePage> {
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildScoreDisplay(gameState.score),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 40.0),
+                              child: _buildScoreDisplay(gameState.score),
+                            ),
                             _buildCoinCounter(gameState.coins),
                           ],
                         ),
@@ -219,20 +224,20 @@ class _MyHomePageState extends State<MyHomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.blueAccent, width: 2),
+        color: Colors.black.withOpacity(0.8),
+        border: Border.all(color: const Color(0xFF0204f9), width: 3),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.stars, color: Colors.blueAccent, size: 24),
-          const SizedBox(width: 8),
+          Image.asset('assets/images/ui/icon_star.png', width: 24, height: 24),
+          const SizedBox(width: 12),
           Text(
             '$score',
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
+              fontFamily: 'PressStart2P',
+              color: Color(0xFF0204f9),
+              fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -245,20 +250,20 @@ class _MyHomePageState extends State<MyHomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.amber, width: 2),
+        color: Colors.black.withOpacity(0.8),
+        border: Border.all(color: const Color(0xFFfacb03), width: 3),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.monetization_on, color: Colors.amber, size: 24),
-          const SizedBox(width: 8),
+          Image.asset('assets/images/ui/icon_coin.png', width: 24, height: 24),
+          const SizedBox(width: 12),
           Text(
             '$coins',
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
+              fontFamily: 'PressStart2P',
+              color: Color(0xFFfacb03),
+              fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -282,23 +287,23 @@ class _MyHomePageState extends State<MyHomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: fuelColor, width: 2),
+        color: Colors.black.withOpacity(0.8),
+        border: Border.all(color: const Color(0xFF52a555), width: 3),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.local_gas_station, color: fuelColor, size: 24),
-          const SizedBox(width: 8),
+          Image.asset('assets/images/ui/icon_fuel.png', width: 24, height: 24),
+          const SizedBox(width: 12),
           SizedBox(
-            width: 80,
+            width: 100,
+            height: 16,
             child: LinearProgressIndicator(
               value: percentage,
-              backgroundColor: Colors.grey.shade800,
+              backgroundColor: Colors.grey.shade900,
               valueColor: AlwaysStoppedAnimation<Color>(fuelColor),
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
+              minHeight: 16,
+              borderRadius: BorderRadius.zero,
             ),
           ),
         ],
@@ -310,30 +315,35 @@ class _MyHomePageState extends State<MyHomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.purpleAccent, width: 2),
+        color: Colors.black.withOpacity(0.8),
+        border: Border.all(color: const Color(0xFFad6ef3), width: 3),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.flag, color: Colors.purpleAccent, size: 24),
-          const SizedBox(width: 8),
+          Image.asset('assets/images/ui/icon_flag.png', width: 24, height: 24),
+          const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Sec. $section',
+                'NIVEL $section',
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
+                  fontFamily: 'PressStart2P',
+                  color: Color(0xFFad6ef3),
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(height: 4),
               Text(
                 '-$pointsRemaining m',
-                style: const TextStyle(color: Colors.white70, fontSize: 10),
+                style: const TextStyle(
+                  fontFamily: 'PressStart2P',
+                  color: Color(0xFFad6ef3),
+                  fontSize: 10,
+                ),
               ),
             ],
           ),
@@ -364,20 +374,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
     return Container(
       width: 250,
-      height: 35,
+      height: 40,
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isReady ? Colors.white : Colors.grey,
-          width: 2,
+          width: 3,
         ),
         boxShadow: [
           if (isReady || isActive)
             BoxShadow(
               color: glowColor.withOpacity(0.6),
-              blurRadius: 15,
-              spreadRadius: 2,
+              blurRadius: 0,
+              spreadRadius: 4,
             ),
         ],
       ),
@@ -390,12 +399,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 width: constraints.maxWidth * percentage,
                 decoration: BoxDecoration(
                   color: barColor,
-                  borderRadius: BorderRadius.circular(8),
-                  gradient: LinearGradient(
-                    colors: [barColor.withOpacity(0.5), barColor],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
+                  borderRadius: BorderRadius.zero, // Pixel art style
+                  shape: BoxShape.rectangle,
                 ),
               );
             },
@@ -405,21 +410,28 @@ class _MyHomePageState extends State<MyHomePage> {
           Center(
             child: Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
+                fontFamily: 'PressStart2P',
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
-                shadows: const [Shadow(blurRadius: 2, color: Colors.black)],
+                fontSize: 12,
+                shadows: [Shadow(blurRadius: 2, color: Colors.black)],
               ),
             ),
           ),
 
           // 3. Icono
-          const Positioned(
+          Positioned(
             right: 10,
             top: 0,
             bottom: 0,
-            child: Icon(Icons.flash_on, color: Colors.white70, size: 20),
+            child: Center(
+              child: Image.asset(
+                'assets/images/ui/icon_lightning.png',
+                width: 20,
+                height: 20,
+              ),
+            ),
           ),
         ],
       ),

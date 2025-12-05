@@ -10,26 +10,36 @@ class PauseButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Positioned(
       top: 10,
-      right: 10,
-      child: Material(
-        color: Colors.transparent,
-        child: IconButton(
-          onPressed: () {
-            game.musicManager.setVolume(0.2);
-            game.sfxManager.play('ui_pause.wav');
-            game.pauseEngine();
-            game.overlays.remove('PauseButton');
-            game.overlays.add('PauseMenu');
-          },
-          icon: Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+      left: 10,
+      child: GestureDetector(
+        onTap: () {
+          game.musicManager.setVolume(0.2);
+          game.sfxManager.play('ui_pause.wav');
+          game.pauseEngine();
+          game.overlays.remove('PauseButton');
+          game.overlays.add('PauseMenu');
+        },
+        child: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.8),
+            shape: BoxShape.rectangle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black,
+                offset: Offset(2, 2),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          child: Center(
+            child: Image.asset(
+              'assets/images/ui/icon_pause.png',
+              width: 30,
+              height: 30,
             ),
-            child: Icon(Icons.pause, color: Colors.white, size: 30),
           ),
         ),
       ),
