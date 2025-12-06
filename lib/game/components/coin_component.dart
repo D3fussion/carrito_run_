@@ -1,6 +1,8 @@
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/components.dart';
 import 'package:carrito_run/game/game.dart';
+import 'package:carrito_run/game/components/carrito_component.dart';
 
 class CoinComponent extends SpriteComponent
     with CollisionCallbacks, HasGameReference<CarritoGame> {
@@ -66,18 +68,37 @@ class CoinComponent extends SpriteComponent
 
   @override
   void update(double dt) {
+    if (game.gameState.isGameOver) return;
+
+    if (game.gameState.isMagnetActive) {
+      final player = game.children.whereType<CarritoComponent>().firstOrNull;
+      if (player != null) {
+        final direction = (player.position - position).normalized();
+        const magnetSpeed = 800.0;
+
+        position += direction * magnetSpeed * dt;
+
+        if (position.distanceTo(player.position) < 50) {
+          game.gameState.addCoin();
+          game.sfxManager.playCoin();
+          removeFromParent();
+          return;
+        }
+      }
+    }
+
     super.update(dt);
 
     final currentSpeed = game.gameState.currentSpeed;
 
     if (isLandscape) {
-      position.x -= currentSpeed * dt;
+      if (!game.gameState.isMagnetActive) position.x -= currentSpeed * dt;
 
       if (position.x < -size.x) {
         removeFromParent();
       }
     } else {
-      position.y += currentSpeed * dt;
+      if (!game.gameState.isMagnetActive) position.y += currentSpeed * dt;
 
       if (position.y > game.size.y + size.y) {
         removeFromParent();

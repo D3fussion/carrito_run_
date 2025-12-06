@@ -1,3 +1,4 @@
+import 'package:carrito_run/services/supabase_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,12 +7,34 @@ import 'package:window_manager/window_manager.dart';
 import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/states/game_state.dart';
 
-class StartScreen extends StatelessWidget {
+class StartScreen extends StatefulWidget {
   final CarritoGame game;
 
   const StartScreen({super.key, required this.game});
 
   @override
+  State<StartScreen> createState() => _StartScreenState();
+}
+
+class _StartScreenState extends State<StartScreen> {
+  List<Map<String, dynamic>> _highscores = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHighscores();
+  }
+
+  Future<void> _loadHighscores() async {
+    final supabase = Provider.of<SupabaseService>(context, listen: false);
+    final scores = await supabase.getTopHighscores(limit: 3);
+    if (mounted) {
+      setState(() {
+        _highscores = scores;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -58,7 +81,7 @@ class StartScreen extends StatelessWidget {
                       border: Border.all(color: Colors.cyanAccent, width: 4),
                     ),
                     child: Text(
-                      'CART RUN',
+                      'LAST DROP',
                       style: const TextStyle(
                         fontFamily: 'PressStart2P',
                         fontSize: 32,
@@ -108,12 +131,12 @@ class StartScreen extends StatelessWidget {
                           await windowManager.setResizable(false);
                         }
 
-                        game.overlays.remove('StartScreen');
-                        game.overlays.add('PauseButton');
+                        widget.game.overlays.remove('StartScreen');
+                        widget.game.overlays.add('PauseButton');
 
                         Future.delayed(const Duration(milliseconds: 100), () {
-                          game.onGameResize(game.size);
-                          game.startGame();
+                          widget.game.onGameResize(widget.game.size);
+                          widget.game.startGame();
                         });
                       },
                       style: ElevatedButton.styleFrom(
@@ -136,45 +159,70 @@ class StartScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
 
-                  // Ir al garege
-                  SizedBox(
-                    width: 220,
-                    height: 60,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        game.musicManager.playUiMusic('music_garage.ogg');
-                        game.overlays.remove('StartScreen');
-                        game.overlays.add('ShopScreen');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueGrey,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.zero,
-                          side: BorderSide(color: Colors.white, width: 3),
-                        ),
-                        elevation: 0,
+                  // Ir al Garaje
+                  _buildMenuButton(
+                    context,
+                    label: "GARAJE",
+                    iconPath: 'assets/images/ui/icon_garage.png',
+                    onPressed: () {
+                      widget.game.musicManager.playUiMusic('music_garage.ogg');
+                      widget.game.overlays.remove('StartScreen');
+                      widget.game.overlays.add('ShopScreen');
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Ir a Mejoras
+                  _buildMenuButton(
+                    context,
+                    label: "MEJORAS",
+                    iconPath: 'assets/images/ui/icon_upgrades.png',
+                    onPressed: () {
+                      widget.game.musicManager.playUiMusic('music_garage.ogg');
+                      widget.game.overlays.remove('StartScreen');
+                      widget.game.overlays.add('UpgradesScreen');
+                    },
+                  ),
+
+                  // Display Highscores
+                  if (_highscores.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        border: Border.all(color: Colors.amber, width: 2),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
                         children: [
-                          Image.asset(
-                            'assets/images/ui/icon_garage.png',
-                            width: 24,
-                            height: 24,
-                          ),
-                          const SizedBox(width: 12),
                           const Text(
-                            'GARAJE',
+                            "TOP 3 HIGHSCORES",
                             style: TextStyle(
                               fontFamily: 'PressStart2P',
-                              fontSize: 16,
-                              color: Colors.white,
+                              color: Colors.amber,
+                              fontSize: 12,
                             ),
                           ),
+                          const SizedBox(height: 10),
+                          ..._highscores.map((score) {
+                            final name = score['player_name'] ?? 'Anon';
+                            final points = score['points'] ?? 0;
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Text(
+                                "$name: $points",
+                                style: const TextStyle(
+                                  fontFamily: 'PressStart2P',
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ],
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -223,6 +271,44 @@ class StartScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMenuButton(
+    BuildContext context, {
+    required String label,
+    required String iconPath,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: 220,
+      height: 60,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blueGrey,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.zero,
+            side: BorderSide(color: Colors.white, width: 3),
+          ),
+          elevation: 0,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(iconPath, width: 24, height: 24),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                fontFamily: 'PressStart2P',
+                fontSize: 16,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

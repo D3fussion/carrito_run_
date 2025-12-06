@@ -60,6 +60,10 @@ class SfxManager {
     await play('coin.wav', volume: 0.5, pitch: pitch);
   }
 
+  Future<void> playPowerup() async {
+    await play('powerup.wav', volume: 0.7);
+  }
+
   void toggleMute() {
     _isMuted = !_isMuted;
     if (_isMuted) {

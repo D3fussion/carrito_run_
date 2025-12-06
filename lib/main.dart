@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
 import 'package:flame/flame.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -17,9 +19,20 @@ import 'package:carrito_run/game/overlays/refuel_overlay.dart';
 import 'package:carrito_run/game/overlays/loading_screen.dart';
 import 'package:carrito_run/game/overlays/game_over_overlay.dart';
 import 'package:carrito_run/game/overlays/shop_screen.dart';
+import 'package:carrito_run/game/overlays/upgrades_screen.dart';
+import 'package:carrito_run/services/supabase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Cargar .env
+  await dotenv.load(fileName: ".env");
+
+  // Supabase
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL'] ?? '',
+    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+  );
 
   // 1. CONFIGURACIÓN ESCRITORIO (Windows/Mac/Linux)
   if (!kIsWeb &&
@@ -37,7 +50,7 @@ Future<void> main() async {
       backgroundColor: Colors.black,
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.normal,
-      title: "Cart Run",
+      title: "Last Drop",
     );
 
     windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -55,11 +68,18 @@ Future<void> main() async {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
-    await Flame.device.fullScreen();
   }
 
+  await AudioPlayer.clearAssetCache();
+
   runApp(
-    ChangeNotifierProvider(create: (_) => GameState(), child: const MyApp()),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => GameState()),
+        Provider<SupabaseService>(create: (_) => SupabaseService()),
+      ],
+      child: const MyApp(),
+    ),
   );
 }
 
@@ -69,7 +89,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Cart Run',
+      title: 'Last Drop',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -110,30 +130,37 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          GameWidget(
-            game: game,
-            loadingBuilder: (context) => const LoadingScreen(),
-            overlayBuilderMap: {
-              'StartScreen': (context, game) =>
-                  StartScreen(game: game as CarritoGame),
-              'ShopScreen': (context, game) =>
-                  ShopScreen(game: game as CarritoGame),
-              'PauseMenu': (context, game) =>
-                  PauseMenu(game: game as CarritoGame),
-              'PauseButton': (context, game) =>
-                  PauseButton(game: game as CarritoGame),
-              'RefuelOverlay': (context, game) =>
-                  RefuelOverlay(game: game as CarritoGame),
-              'GameOverOverlay': (context, game) =>
-                  GameOverOverlay(game: game as CarritoGame),
-            },
-            initialActiveOverlays: const ['StartScreen'],
-          ),
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: ClipRect(
+          child: Stack(
+            children: [
+              GameWidget(
+                game: game,
+                loadingBuilder: (context) => const LoadingScreen(),
+                overlayBuilderMap: {
+                  'StartScreen': (context, game) =>
+                      StartScreen(game: game as CarritoGame),
+                  'ShopScreen': (context, game) =>
+                      ShopScreen(game: game as CarritoGame),
+                  'PauseMenu': (context, game) =>
+                      PauseMenu(game: game as CarritoGame),
+                  'PauseButton': (context, game) =>
+                      PauseButton(game: game as CarritoGame),
+                  'RefuelOverlay': (context, game) =>
+                      RefuelOverlay(game: game as CarritoGame),
+                  'GameOverOverlay': (context, game) =>
+                      GameOverOverlay(game: game as CarritoGame),
+                  'UpgradesScreen': (context, game) =>
+                      UpgradesScreen(game: game as CarritoGame),
+                },
+                initialActiveOverlays: const ['StartScreen'],
+              ),
 
-          Positioned.fill(child: _buildGameUI()),
-        ],
+              Positioned.fill(child: _buildGameUI()),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -204,6 +231,40 @@ class _MyHomePageState extends State<MyHomePage> {
                       ],
                     ),
                   ),
+
+                // Indicaciones powerups
+                Positioned(
+                  top: isLandscape ? 120 : 190,
+                  left: 20,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (gameState.isMagnetActive)
+                        _buildPowerupIndicator(
+                          'assets/images/ui/icon_magnet.png',
+                          gameState.magnetTimer,
+                        ),
+                      if (gameState.hasShield || gameState.shieldTimer > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: _buildPowerupIndicator(
+                            'assets/images/ui/icon_shield.png',
+                            gameState.shieldTimer > 0
+                                ? gameState.shieldTimer
+                                : 99,
+                          ),
+                        ),
+                      if (gameState.isMultiplierActive)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: _buildPowerupIndicator(
+                            'assets/images/ui/icon_2x.png',
+                            gameState.multiplierTimer,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
 
                 if (gameState.currentCarHasActiveAbility)
                   Positioned(
@@ -392,21 +453,19 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       child: Stack(
         children: [
-          // 1. Barra de Progreso
           LayoutBuilder(
             builder: (context, constraints) {
               return Container(
                 width: constraints.maxWidth * percentage,
                 decoration: BoxDecoration(
                   color: barColor,
-                  borderRadius: BorderRadius.zero, // Pixel art style
+                  borderRadius: BorderRadius.zero,
                   shape: BoxShape.rectangle,
                 ),
               );
             },
           ),
 
-          // 2. Texto Centrado
           Center(
             child: Text(
               label,
@@ -420,7 +479,6 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ),
 
-          // 3. Icono
           Positioned(
             right: 10,
             top: 0,
@@ -431,6 +489,32 @@ class _MyHomePageState extends State<MyHomePage> {
                 width: 20,
                 height: 20,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPowerupIndicator(String iconPath, double timer) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        border: Border.all(color: Colors.white, width: 2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(iconPath, width: 20, height: 20),
+          const SizedBox(width: 8),
+          Text(
+            timer > 90 ? "ON" : "${timer.toStringAsFixed(1)}s",
+            style: const TextStyle(
+              fontFamily: 'PressStart2P',
+              color: Colors.white,
+              fontSize: 10,
             ),
           ),
         ],

@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// --- MODELO DE DATOS DEL CARRO ---
+// Enums
+enum PowerupType { magnet, shield, multiplier }
+
 class CarItem {
   final int id;
   final String name;
@@ -23,11 +25,9 @@ class CarItem {
   });
 }
 
-// --- ESTADO PRINCIPAL DEL JUEGO ---
 class GameState extends ChangeNotifier {
-  // --- VARIABLES DE PUNTUACIÓN ---
   int _coins = 0;
-  int _displayScore = 0;
+  double _displayScore = 0;
   int _internalScore = 0;
   double _timeElapsed = 0.0;
   final double _displayScoreMultiplier = 10.0;
@@ -64,6 +64,34 @@ class GameState extends ChangeNotifier {
   // --- ESCUDO (BUMPER CAR) ---
   bool _hasShield = false;
 
+  // --- POWERUPS ---
+  // Niveles de mejora (0 = base, aumenta duración)
+  int _magnetLevel = 0;
+  int _shieldLevel = 0;
+  int _multiplierLevel = 0;
+
+  // Duración base (segundos)
+  double _magnetDuration = 5.0;
+  double _shieldDuration = 10.0; // Tiempo límite del escudo si no se golpea
+  double _multiplierDuration = 5.0;
+
+  // Timers activos
+  double _magnetTimer = 0.0;
+  double _shieldTimer = 0.0;
+  double _multiplierTimer = 0.0;
+
+  // Estado activo
+  bool get isMagnetActive => _magnetTimer > 0;
+  bool get isMultiplierActive => _multiplierTimer > 0;
+
+  // Multiplicador activo
+  int get currentScoreMultiplier => _multiplierTimer > 0 ? 2 : 1;
+
+  // Costos de mejora
+  int get magnetUpgradeCost => (_magnetLevel + 1) * 500;
+  int get shieldUpgradeCost => (_shieldLevel + 1) * 500;
+  int get multiplierUpgradeCost => (_multiplierLevel + 1) * 1000;
+
   // --- VARIABLES DE LA TIENDA ---
   int _totalWalletCoins = 0;
   int _maxSectionReached = 1;
@@ -74,15 +102,10 @@ class GameState extends ChangeNotifier {
   final List<double> _fuelHistory = [];
   double _historyTimer = 0.0;
 
-  // =========================================================
-  //                        GETTERS
-  // =========================================================
-
-  // El getter que te faltaba:
   bool get isOffRoad => _isOffRoad;
 
   int get coins => _coins;
-  int get score => _displayScore;
+  int get score => _displayScore.floor();
   int get internalScore => _internalScore;
   double get timeElapsed => _timeElapsed;
   double get abilityCharge => _abilityCharge;
@@ -124,9 +147,7 @@ class GameState extends ChangeNotifier {
     return activeAbilityCarIds.contains(_selectedCarId);
   }
 
-  // =========================================================
-  //                    CATÁLOGO DE CARROS
-  // =========================================================
+  // Catalogo de carros
   final List<CarItem> allCars = [
     // TIER 0
     CarItem(
@@ -313,10 +334,6 @@ class GameState extends ChangeNotifier {
     ),
   ];
 
-  // =========================================================
-  //                        MÉTODOS
-  // =========================================================
-
   void setPlaying(bool playing) {
     _isPlaying = playing;
     _safeNotifyListeners();
@@ -324,7 +341,6 @@ class GameState extends ChangeNotifier {
 
   void setOffRoad(bool isOffRoad) {
     _isOffRoad = isOffRoad;
-    // No notificamos aquí para no saturar el renderizado en cada frame
   }
 
   bool shouldSpawnGasStation() {
@@ -344,7 +360,7 @@ class GameState extends ChangeNotifier {
 
   void addCoin() {
     int value = 1;
-    if (_selectedCarId == 16) value = 2; // El Dorado
+    if (_selectedCarId == 16) value = 2;
     _coins += value;
     _safeNotifyListeners();
   }
@@ -353,12 +369,12 @@ class GameState extends ChangeNotifier {
     if (_fuel < maxFuel) {
       double recovery = _smallFuelRecovery;
 
-      if (_selectedCarId == 5) recovery *= 2.0; // Ambulancia
+      if (_selectedCarId == 5) recovery *= 2.0;
 
       _fuel += recovery;
       if (_fuel > maxFuel) _fuel = maxFuel;
 
-      addAbilityCharge(20.0); // Carga habilidad
+      addAbilityCharge(20.0);
       _safeNotifyListeners();
     }
   }
@@ -398,9 +414,23 @@ class GameState extends ChangeNotifier {
 
     _timeElapsed += dt;
     _internalScore = _timeElapsed.floor();
-    _displayScore = (_timeElapsed * _displayScoreMultiplier).toInt();
 
-    // DeLorean History
+    if (_multiplierTimer > 0) {
+      _displayScore += (dt * _displayScoreMultiplier * 2);
+    } else {
+      _displayScore += (dt * _displayScoreMultiplier);
+    }
+
+    if (_magnetTimer > 0) _magnetTimer -= dt;
+    if (_multiplierTimer > 0) _multiplierTimer -= dt;
+    if (_shieldTimer > 0) {
+      _shieldTimer -= dt;
+      if (_shieldTimer <= 0) {
+        _hasShield = false;
+      }
+    }
+
+    // DeLorean
     if (_selectedCarId == 15) {
       _historyTimer += dt;
       if (_historyTimer >= 0.5) {
@@ -488,6 +518,11 @@ class GameState extends ChangeNotifier {
     _isOffRoad = false;
     _isPlaying = false;
     _fuelHistory.clear();
+
+    _magnetTimer = 0.0;
+    _shieldTimer = 0.0;
+    _multiplierTimer = 0.0;
+
     _safeNotifyListeners();
   }
 
@@ -515,7 +550,6 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- PERSISTENCIA ---
   Future<void> loadData() async {
     final prefs = await SharedPreferences.getInstance();
     _totalWalletCoins = prefs.getInt('wallet_coins') ?? 0;
@@ -528,6 +562,12 @@ class GameState extends ChangeNotifier {
     } else {
       _ownedCarIds = [0];
     }
+
+    _magnetLevel = prefs.getInt('magnet_level') ?? 0;
+    _shieldLevel = prefs.getInt('shield_level') ?? 0;
+    _multiplierLevel = prefs.getInt('multiplier_level') ?? 0;
+
+    _updateDurations();
     _safeNotifyListeners();
   }
 
@@ -537,9 +577,11 @@ class GameState extends ChangeNotifier {
     await prefs.setInt('max_section', _maxSectionReached);
     await prefs.setInt('selected_car', _selectedCarId);
     await prefs.setString('owned_cars', _ownedCarIds.join(','));
+    await prefs.setInt('magnet_level', _magnetLevel);
+    await prefs.setInt('shield_level', _shieldLevel);
+    await prefs.setInt('multiplier_level', _multiplierLevel);
   }
 
-  // --- TIENDA ---
   bool isCarUnlocked(int carId) {
     if (_ownedCarIds.contains(carId)) return true;
     final car = allCars.firstWhere((c) => c.id == carId);
@@ -578,7 +620,6 @@ class GameState extends ChangeNotifier {
     }
   }
 
-  // --- HABILIDAD ESPECIAL ---
   void addAbilityCharge(double amount) {
     if (_isAbilityActive) return;
     _abilityCharge += amount;
@@ -617,4 +658,85 @@ class GameState extends ChangeNotifier {
       _safeNotifyListeners();
     }
   }
+
+  void _updateDurations() {
+    _magnetDuration = 5.0 + (_magnetLevel * 1.0);
+    _shieldDuration = 10.0 + (_shieldLevel * 2.0);
+    _multiplierDuration = 5.0 + (_multiplierLevel * 1.0);
+  }
+
+  void activatePowerup(PowerupType type) {
+    switch (type) {
+      case PowerupType.magnet:
+        _magnetTimer = _magnetDuration;
+        break;
+      case PowerupType.shield:
+        _hasShield = true;
+        _shieldTimer = _shieldDuration;
+        break;
+      case PowerupType.multiplier:
+        _multiplierTimer = _multiplierDuration;
+        break;
+    }
+    _safeNotifyListeners();
+  }
+
+  void upgradePowerup(PowerupType type) {
+    bool upgraded = false;
+    switch (type) {
+      case PowerupType.magnet:
+        if (_totalWalletCoins >= magnetUpgradeCost) {
+          _totalWalletCoins -= magnetUpgradeCost;
+          _magnetLevel++;
+          upgraded = true;
+        }
+        break;
+      case PowerupType.shield:
+        if (_totalWalletCoins >= shieldUpgradeCost) {
+          _totalWalletCoins -= shieldUpgradeCost;
+          _shieldLevel++;
+          upgraded = true;
+        }
+        break;
+      case PowerupType.multiplier:
+        if (_totalWalletCoins >= multiplierUpgradeCost) {
+          _totalWalletCoins -= multiplierUpgradeCost;
+          _multiplierLevel++;
+          upgraded = true;
+        }
+        break;
+    }
+
+    if (upgraded) {
+      _updateDurations();
+      _saveData();
+      notifyListeners();
+    }
+  }
+
+  int getPowerupLevel(PowerupType type) {
+    switch (type) {
+      case PowerupType.magnet:
+        return _magnetLevel;
+      case PowerupType.shield:
+        return _shieldLevel;
+      case PowerupType.multiplier:
+        return _multiplierLevel;
+    }
+  }
+
+  double getPowerupDuration(PowerupType type) {
+    switch (type) {
+      case PowerupType.magnet:
+        return _magnetDuration;
+      case PowerupType.shield:
+        return _shieldDuration;
+      case PowerupType.multiplier:
+        return _multiplierDuration;
+    }
+  }
+
+  double get magnetTimer => _magnetTimer;
+  double get shieldTimer => _shieldTimer;
+  double get multiplierTimer => _multiplierTimer;
 }

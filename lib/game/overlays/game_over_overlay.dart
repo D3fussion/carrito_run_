@@ -2,11 +2,101 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:carrito_run/game/game.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:carrito_run/services/supabase_service.dart';
+import 'package:provider/provider.dart';
 
 class GameOverOverlay extends StatelessWidget {
   final CarritoGame game;
 
   const GameOverOverlay({super.key, required this.game});
+
+  void _showSaveScoreDialog(BuildContext context, int score) {
+    final TextEditingController _nameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2D2D44),
+          title: const Text(
+            "Guardar Puntuación",
+            style: TextStyle(
+              fontFamily: 'PressStart2P',
+              color: Colors.cyanAccent,
+              fontSize: 14,
+            ),
+          ),
+          content: TextField(
+            controller: _nameController,
+            style: const TextStyle(
+              color: Colors.white,
+              fontFamily: 'PressStart2P',
+              fontSize: 12,
+            ),
+            decoration: const InputDecoration(
+              hintText: "Tu Nombre",
+              hintStyle: TextStyle(
+                color: Colors.grey,
+                fontFamily: 'PressStart2P',
+                fontSize: 10,
+              ),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.cyanAccent),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                "Cancelar",
+                style: TextStyle(
+                  fontFamily: 'PressStart2P',
+                  color: Colors.white,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                final name = _nameController.text.trim();
+                if (name.isNotEmpty) {
+                  final supabase = Provider.of<SupabaseService>(
+                    context,
+                    listen: false,
+                  );
+                  await supabase.checkAndUpsertPlayer(
+                    playerName: name,
+                    score: score,
+                  );
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "¡Score Guardado!",
+                        style: TextStyle(fontFamily: 'PressStart2P'),
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                "Guardar",
+                style: TextStyle(
+                  fontFamily: 'PressStart2P',
+                  color: Colors.greenAccent,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +172,7 @@ class GameOverOverlay extends StatelessWidget {
                                     TargetPlatform.linux)) {
                           await windowManager.setResizable(true);
                         }
+                        game.overlays.remove('GameOverOverlay');
                         game.resetGame();
                       },
                       style: ElevatedButton.styleFrom(
@@ -119,7 +210,7 @@ class GameOverOverlay extends StatelessWidget {
                   ),
                   const SizedBox(width: 20),
 
-                  // Boton para volver a jugar
+                  // Botón para volver a jugar
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
@@ -161,6 +252,29 @@ class GameOverOverlay extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 20),
+              // Boton Guardar Score Supabase
+              ElevatedButton.icon(
+                onPressed: () {
+                  _showSaveScoreDialog(context, gameState.score);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                    side: BorderSide(color: Colors.white, width: 2),
+                  ),
+                ),
+                icon: const Icon(Icons.save, color: Colors.white),
+                label: const Text(
+                  "Guardar Score",
+                  style: TextStyle(
+                    fontFamily: 'PressStart2P',
+                    fontSize: 10,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ],
           ),

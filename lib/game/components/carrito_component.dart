@@ -66,7 +66,7 @@ class CarritoComponent extends PositionComponent
   // Variables Hielo/Lava
   double _iceCampingTimer = 0.0;
   double _currentIceTintIntensity = 0.0;
-  final double _maxIceTime = 3.0;
+  final double _maxIceTime = 2.0;
   double _abilityDurationTimer = 0.0;
   double _lavaDamageTimer = 0.0;
 

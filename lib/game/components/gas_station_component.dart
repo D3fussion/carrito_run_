@@ -26,7 +26,7 @@ class GasStationComponent extends SpriteComponent
     sprite = await game.loadSprite(
       isLandscape ? 'gas_station_landscape.png' : 'gas_station_portrait.png',
     );
-    priority = 1;
+    priority = 20;
     _updateSize();
     anchor = Anchor.center;
     _updatePosition();

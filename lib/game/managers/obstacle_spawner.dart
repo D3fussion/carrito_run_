@@ -4,6 +4,8 @@ import 'package:carrito_run/game/components/fuel_canister_component.dart';
 import 'package:carrito_run/game/game.dart';
 import 'package:carrito_run/game/components/obstacle_component.dart';
 import 'package:flame/components.dart';
+import 'package:carrito_run/game/components/powerup_component.dart';
+import 'package:carrito_run/game/states/game_state.dart';
 
 class ObstaclePattern {
   final List<ObstacleSpawnInfo> obstacles;
@@ -1598,6 +1600,19 @@ class ObstacleSpawner extends Component with HasGameReference<CarritoGame> {
   }
 
   void _spawnCoin(int lane, bool isOnObstacle) {
+    // 4. Chance de Powerup (10%)
+    if (_random.nextDouble() < 0.02) {
+      final type =
+          PowerupType.values[_random.nextInt(PowerupType.values.length)];
+      final powerup = PowerupComponent(
+        isLandscape: isLandscape,
+        lane: lane,
+        type: type,
+      );
+      game.add(powerup);
+      return;
+    }
+
     const double fuelChance = 0.03;
 
     if (_random.nextDouble() < fuelChance) {
